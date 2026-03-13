@@ -14,7 +14,7 @@ class AuthInterceptor extends Interceptor {
     ApiEndpoints.login,
     ApiEndpoints.register,
     ApiEndpoints.parts,
-    ApiEndpoints.categories,
+    ApiEndpoints.allCategories,
     ApiEndpoints.brands,
     ApiEndpoints.search,
     ApiEndpoints.vehicleMakes,

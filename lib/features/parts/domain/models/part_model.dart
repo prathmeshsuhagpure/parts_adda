@@ -1,3 +1,5 @@
+import '../../../catalog/domain/models/category_model.dart';
+
 class PartModel {
   final String id;
   final String sku;
@@ -53,17 +55,11 @@ class PartModel {
       description: json['description'],
       brand: json['brand'] != null
           ? BrandInfo.fromJson(json['brand'])
-          : BrandInfo(
-        id: json['brandId'] ?? '',
-        name: '',
-      ),
+          : BrandInfo(id: json['brandId'] ?? '', name: ''),
 
       category: json['categoryId'] is Map
           ? CategoryInfo.fromJson(json['categoryId'])
-          : CategoryInfo(
-        id: json['categoryId'] ?? '',
-        name: '',
-      ),
+          : CategoryInfo(id: json['categoryId'] ?? '', name: ''),
       price: (json['price'] ?? 0).toDouble(),
       mrp: json['mrp']?.toDouble(),
       b2bPrice: json['b2bPrice']?.toDouble(),
@@ -137,22 +133,6 @@ class BrandInfo {
 
   Map<String, dynamic> toJson() {
     return {"id": id, "name": name, "logo": logo, "isOem": isOem};
-  }
-}
-
-class CategoryInfo {
-  final String id;
-  final String name;
-  final String? slug;
-
-  CategoryInfo({required this.id, required this.name, this.slug});
-
-  factory CategoryInfo.fromJson(Map<String, dynamic> json) {
-    return CategoryInfo(id: json['_id'], name: json['name'], slug: json['slug']);
-  }
-
-  Map<String, dynamic> toJson() {
-    return {"id": id, "name": name, "slug": slug};
   }
 }
 
@@ -240,60 +220,6 @@ class SellerListing {
       "rating": rating,
       "deliveryInfo": deliveryInfo,
       "isFreeDelivery": isFreeDelivery,
-    };
-  }
-}
-
-class CategoryModel {
-  final String id;
-  final String name;
-  final String? slug;
-  final String? icon;
-  final String? image;
-  final String? parentId;
-  final int level;
-  final List<CategoryModel> children;
-  final int partCount;
-
-  CategoryModel({
-    required this.id,
-    required this.name,
-    this.slug,
-    this.icon,
-    this.image,
-    this.parentId,
-    this.level = 0,
-    this.children = const [],
-    this.partCount = 0,
-  });
-
-  factory CategoryModel.fromJson(Map<String, dynamic> json) {
-    return CategoryModel(
-      id: json['_id'],
-      name: json['name'],
-      slug: json['slug'],
-      icon: json['icon'],
-      image: json['image'],
-      parentId: json['parentId'],
-      level: json['level'] ?? 0,
-      children: (json['children'] as List? ?? [])
-          .map((e) => CategoryModel.fromJson(e))
-          .toList(),
-      partCount: json['partCount'] ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      "id": id,
-      "name": name,
-      "slug": slug,
-      "icon": icon,
-      "image": image,
-      "parentId": parentId,
-      "level": level,
-      "children": children.map((e) => e.toJson()).toList(),
-      "partCount": partCount,
     };
   }
 }

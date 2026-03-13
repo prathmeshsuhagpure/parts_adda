@@ -62,6 +62,9 @@ class ProfileProvider extends ChangeNotifier {
     String? name,
     String? email,
     String? avatar,
+    String? dateOfBirth,
+    String? phone,
+    String? gender,
   }) async {
     _status = ProfileStatus.saving;
     notifyListeners();
@@ -70,6 +73,9 @@ class ProfileProvider extends ChangeNotifier {
         name: name,
         email: email,
         avatar: avatar,
+        dateOfBirth: dateOfBirth,
+        phone: phone,
+        gender: gender,
       );
       _status = ProfileStatus.loaded;
       notifyListeners();
@@ -102,7 +108,6 @@ class ProfileProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      print("Add address error: $e");
       _status = ProfileStatus.error;
       _error = e.toString();
       notifyListeners();
@@ -167,9 +172,6 @@ class ProfileProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Vehicles
-  // ─────────────────────────────────────────────────────────
   Future<void> loadVehicles() async {
     try {
       _vehicles = await _repo.getVehicles();
@@ -178,12 +180,16 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<bool> addVehicle(Map<String, dynamic> data) async {
+    _setStatus(ProfileStatus.saving);
     try {
       final v = await _repo.addVehicle(data);
       _vehicles.add(v);
-      notifyListeners();
+      _setStatus(ProfileStatus.loaded);
       return true;
-    } catch (_) {
+    } catch (e) {
+      _status = ProfileStatus.error;
+      _error = e.toString();
+      notifyListeners();
       return false;
     }
   }
@@ -196,9 +202,6 @@ class ProfileProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Wishlist
-  // ─────────────────────────────────────────────────────────
   Future<void> loadWishlist() async {
     try {
       _wishlist = await _repo.getWishlist();

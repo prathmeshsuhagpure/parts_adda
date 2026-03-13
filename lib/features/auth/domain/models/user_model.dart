@@ -41,7 +41,7 @@ class UserModel {
       avatar: json['avatar'],
       gender: json['gender'] != null
           ? Gender.values.firstWhere(
-            (e) => e.name == json['gender'],
+            (e) => e.name == json['gender'].toString().toLowerCase(),
         orElse: () => Gender.other,
       )
           : null,

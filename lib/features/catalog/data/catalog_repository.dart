@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:parts_adda/core/api/api_endpoints.dart';
-import '../domain/models/part_model.dart';
+import '../../parts/domain/models/part_model.dart';
+import '../domain/models/category_model.dart';
 import '../presentation/providers/catalog_provider.dart';
-
 
 class CatalogRepository {
   final Dio dio;
@@ -58,11 +58,11 @@ class CatalogRepository {
   }
 
   /// Get all categories
-  Future<List<CategoryModel>> getMainCategories() async {
+  Future<List<CategoryModel>> getRootCategories() async {
     try {
-      final response = await dio.get(ApiEndpoints.categories);
+      final response = await dio.get(ApiEndpoints.rootCategories);
 
-      final list = response.data["data"]["categories"] as List;
+      final list = response.data["data"] as List;
 
       return list.map((e) => CategoryModel.fromJson(e)).toList();
     } catch (e) {
@@ -76,7 +76,7 @@ class CatalogRepository {
       if (response.statusCode == 200 && response.data["success"] == true) {
 
         final List list =
-        response.data["data"]["subcategories"];
+        response.data["data"];
 
         return list
             .map((e) => CategoryModel.fromJson(e))

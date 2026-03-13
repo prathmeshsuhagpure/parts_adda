@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../data/search_repository.dart';
-import '../../../catalog/domain/models/part_model.dart';
+import '../../../parts/domain/models/part_model.dart';
 
 enum SearchStatus { initial, loading, loaded, error }
 

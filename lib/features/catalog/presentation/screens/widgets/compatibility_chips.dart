@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../domain/models/part_model.dart';
+import '../../../../parts/domain/models/part_model.dart';
 import '../../../../../core/constants/app_colors.dart';
 import '../../../../../core/constants/app_text_styles.dart';
 

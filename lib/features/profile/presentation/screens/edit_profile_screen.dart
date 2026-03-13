@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../auth/domain/models/user_model.dart';
 import '../providers/profile_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -70,15 +71,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneCtrl.text = u.phone;
     _initName = u.name;
     _initEmail = u.email ?? '';
+    if (u.gender != null) {
+      switch (u.gender!) {
+        case Gender.male:
+          _gender = "Male";
+          break;
+        case Gender.female:
+          _gender = "Female";
+          break;
+        case Gender.other:
+          _gender = "Other";
+          break;
+      }
+    }
+    if (u.dateOfBirth != null) {
+      _dob = u.dateOfBirth;
+    }
     _nameCtrl.addListener(_checkChanges);
     _emailCtrl.addListener(_checkChanges);
+    setState(() {});
   }
 
-  void _checkChanges() => setState(() {
-    _hasChanges =
-        _nameCtrl.text.trim() != _initName ||
-        _emailCtrl.text.trim() != _initEmail;
-  });
+  void _checkChanges() {
+    final u = context.read<ProfileProvider>().user;
+    if (u == null) return;
+
+    setState(() {
+      _hasChanges =
+          _nameCtrl.text.trim() != _initName ||
+          _emailCtrl.text.trim() != _initEmail ||
+          _gender != (u.gender ?? 'Male') ||
+          (_dob?.toIso8601String() ?? '') != (u.dateOfBirth ?? '');
+    });
+  }
 
   @override
   void dispose() {
@@ -96,6 +121,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final ok = await context.read<ProfileProvider>().updateProfile(
       name: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      gender: _gender,
+      dateOfBirth: _dob != null ? _dob!.toIso8601String() : null,
+      avatar: null,
     );
     if (!mounted) return;
     if (ok) {
@@ -370,7 +399,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: (provider.isSaving || !_hasChanges) ? null : _save,
+                    onPressed: (provider.isSaving || !_hasChanges)
+                        ? null
+                        : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       disabledBackgroundColor: AppColors.primary.withValues(

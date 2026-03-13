@@ -6,7 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../catalog/domain/models/part_model.dart';
+import '../../../parts/domain/models/part_model.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../providers/search_provider.dart';

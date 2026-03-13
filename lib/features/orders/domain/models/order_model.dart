@@ -22,7 +22,7 @@ class OrderModel {
   );
 
   factory OrderModel.fromJson(Map<String, dynamic> j) => OrderModel(
-    id: j['id'],
+    id: j['_id'],
     status: j['status'],
     items: j['items'] ?? [],
     total: (j['total'] ?? 0).toDouble(),

@@ -219,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () => context.push(
-                                AppRoutes.otp,
+                                AppRoutes.forgotPassword,
                                 extra: _identifierCtrl.text.trim(),
                               ),
                               child: Text(

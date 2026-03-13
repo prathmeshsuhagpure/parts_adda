@@ -7,8 +7,8 @@ class AppRoutes {
   // Auth
   static const String login = '/login';
   static const String register = '/register';
-  static const String otp = '/otp';
   static const String b2bRegister = '/register/b2b';
+  static const String forgotPassword = '/forgot-password';
 
   // Main tabs
   static const String home = '/home';
@@ -23,10 +23,13 @@ class AppRoutes {
   static const String dealerInventory = '/dealer/inventory';
   static const String dealerProfile = '/dealer/profile';
 
-  // Catalog
-  static const String allCategories = '/categories';
+  // Categories
+  static const String allCategories = '/allCategories';
   static const String subCategory   = '/category/:id/sub';
   static const String category = '/category/:id';
+
+  // Parts
+
   static const String partDetail = '/parts/:id';
   static const String filters = '/search/filters';
 

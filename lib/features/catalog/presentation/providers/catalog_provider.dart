@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../data/catalog_repository.dart';
-import '../../domain/models/part_model.dart';
+import '../../../parts/domain/models/part_model.dart';
+import '../../domain/models/category_model.dart';
 
 enum CatalogStatus { initial, loading, loaded, error }
 
@@ -123,15 +124,12 @@ class CatalogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Load all categories
-  // ─────────────────────────────────────────────────────────
   Future<void> loadCategories() async {
     _error = null;
     notifyListeners();
 
     try {
-      _categories = await _repo.getMainCategories();
+      _categories = await _repo.getRootCategories();
     } catch (e) {
       _error = e.toString();
     }

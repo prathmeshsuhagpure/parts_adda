@@ -8,27 +8,27 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../features/cart/presentation/providers/cart_provider.dart';
 import '../../../../shared/widgets/main_shell.dart';
 import '../providers/catalog_provider.dart';
-import '../../domain/models/part_model.dart';
+import '../../../parts/domain/models/part_model.dart';
 
-// Sort options
+// ─── Sort options ─────────────────────────────────────────────
+
 enum _SortBy { newest, priceLow, priceHigh, rating, popular }
 
 extension _SortLabel on _SortBy {
-  String get label {
-    switch (this) {
-      case _SortBy.newest:
-        return 'Newest';
-      case _SortBy.priceLow:
-        return 'Price: Low → High';
-      case _SortBy.priceHigh:
-        return 'Price: High → Low';
-      case _SortBy.rating:
-        return 'Top Rated';
-      case _SortBy.popular:
-        return 'Most Popular';
-    }
-  }
+  String get label => switch (this) {
+    _SortBy.newest => 'Newest',
+    _SortBy.priceLow => 'Price: Low → High',
+    _SortBy.priceHigh => 'Price: High → Low',
+    _SortBy.rating => 'Top Rated',
+    _SortBy.popular => 'Most Popular',
+  };
 }
+
+// ═════════════════════════════════════════════════════════════
+// CategoryScreen — shows parts for a given category/sub-category.
+// Reached from SubCategoryScreen when the user taps "Browse All"
+// or taps a leaf sub-category.
+// ═════════════════════════════════════════════════════════════
 
 class CategoryScreen extends StatefulWidget {
   final String categoryId;
@@ -47,7 +47,6 @@ class CategoryScreen extends StatefulWidget {
 class _CategoryScreenState extends State<CategoryScreen> {
   final _scrollCtrl = ScrollController();
 
-  // Filter state
   _SortBy _sortBy = _SortBy.newest;
   bool _inStockOnly = false;
   bool _oemOnly = false;
@@ -55,7 +54,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   String? _selectedBrand;
   bool _isGridView = true;
 
-  // Active filters map passed to provider
   Map<String, dynamic> get _filters => {
     'sortBy': _sortBy.name,
     if (_inStockOnly) 'inStock': true,
@@ -67,19 +65,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   int get _activeFilterCount =>
       (_inStockOnly ? 1 : 0) +
-      (_oemOnly ? 1 : 0) +
-      (_selectedBrand != null ? 1 : 0) +
-      (_priceRange.start > 0 || _priceRange.end < 50000 ? 1 : 0);
+          (_oemOnly ? 1 : 0) +
+          (_selectedBrand != null ? 1 : 0) +
+          (_priceRange.start > 0 || _priceRange.end < 50000 ? 1 : 0);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CatalogProvider>().loadCategory(
-        categoryId: widget.categoryId,
-        filters: _filters,
-      );
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -88,6 +81,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
     _scrollCtrl.dispose();
     super.dispose();
   }
+
+  void _reload() => context.read<CatalogProvider>().loadCategory(
+    categoryId: widget.categoryId,
+    filters: _filters,
+  );
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
@@ -99,28 +97,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
     }
   }
 
-  void _reload() {
-    context.read<CatalogProvider>().loadCategory(
-      categoryId: widget.categoryId,
-      filters: _filters,
-    );
-  }
-
   void _openSortSheet() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode
-          ? AppColorsDark.bgCard
-          : AppColorsLight.bgCard,
+      backgroundColor: isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _SortSheet(
         current: _sortBy,
         onSelect: (s) {
-          setState(() => _sortBy = s);
           Navigator.pop(context);
+          setState(() => _sortBy = s);
           _reload();
         },
       ),
@@ -128,12 +117,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   void _openFilterSheet() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode
-          ? AppColorsDark.bgCard
-          : AppColorsLight.bgCard,
+      backgroundColor: isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -144,23 +131,23 @@ class _CategoryScreenState extends State<CategoryScreen> {
         priceRange: _priceRange,
         selectedBrand: _selectedBrand,
         onApply: (inStock, oem, price, brand) {
+          Navigator.pop(context);
           setState(() {
             _inStockOnly = inStock;
             _oemOnly = oem;
             _priceRange = price;
             _selectedBrand = brand;
           });
-          Navigator.pop(context);
           _reload();
         },
         onReset: () {
+          Navigator.pop(context);
           setState(() {
             _inStockOnly = false;
             _oemOnly = false;
             _priceRange = const RangeValues(0, 50000);
             _selectedBrand = null;
           });
-          Navigator.pop(context);
           _reload();
         },
       ),
@@ -174,54 +161,42 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final isLoading = provider.isListLoading;
     final isLoadingMore = provider.isLoadingMore;
     final total = provider.totalParts;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? AppColorsDark.bg : AppColorsLight.bg,
+      backgroundColor: isDark ? AppColorsDark.bg : AppColorsLight.bg,
       appBar: AppBar(
-        backgroundColor: isDarkMode ? AppColorsDark.bg : AppColorsLight.bg,
+        backgroundColor: isDark ? AppColorsDark.bg : AppColorsLight.bg,
         elevation: 0,
         leading: GestureDetector(
           onTap: () => context.pop(),
           child: Icon(
             Icons.arrow_back_ios_new,
             size: 18,
-            color: isDarkMode
-                ? AppColorsDark.textPrimary
-                : AppColorsLight.textPrimary,
+            color: isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary,
           ),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.categoryName,
-              style: AppTextStyles.headingSm(isDarkMode),
-            ),
+            Text(widget.categoryName, style: AppTextStyles.headingSm(isDark)),
             if (!isLoading && total > 0)
               Text(
                 '$total parts found',
-                style: AppTextStyles.bodyXs(isDarkMode).copyWith(
-                  color: isDarkMode
-                      ? AppColorsDark.textMuted
-                      : AppColorsLight.textMuted,
+                style: AppTextStyles.bodyXs(isDark).copyWith(
+                  color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
                 ),
               ),
           ],
         ),
         actions: [
-          // Grid / List toggle
           GestureDetector(
             onTap: () => setState(() => _isGridView = !_isGridView),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Icon(
-                _isGridView
-                    ? Icons.view_list_outlined
-                    : Icons.grid_view_outlined,
-                color: isDarkMode
-                    ? AppColorsDark.textSecondary
-                    : AppColorsLight.textSecondary,
+                _isGridView ? Icons.view_list_outlined : Icons.grid_view_outlined,
+                color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
                 size: 20,
               ),
             ),
@@ -231,58 +206,49 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
       body: Column(
         children: [
-          // ── Filter / Sort bar ──────────────────────────────
+          // ── Filter / Sort bar ────────────────────────────────
           _FilterBar(
             sortLabel: _sortBy.label,
             filterCount: _activeFilterCount,
-            onSort: _openSortSheet,
-            onFilter: _openFilterSheet,
             inStockOnly: _inStockOnly,
             oemOnly: _oemOnly,
-            onToggleInStock: () {
-              setState(() => _inStockOnly = !_inStockOnly);
-              _reload();
-            },
-            onToggleOem: () {
-              setState(() => _oemOnly = !_oemOnly);
-              _reload();
-            },
+            onSort: _openSortSheet,
+            onFilter: _openFilterSheet,
+            onToggleInStock: () { setState(() => _inStockOnly = !_inStockOnly); _reload(); },
+            onToggleOem: () { setState(() => _oemOnly = !_oemOnly); _reload(); },
           ),
 
-          // ── Content ────────────────────────────────────────
+          // ── Parts list / grid ────────────────────────────────
           Expanded(
             child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : parts.isEmpty
                 ? EmptyStateWidget(
-                    icon: Icons.search_off,
-                    title: 'No parts found',
-                    subtitle:
-                        'Try adjusting your filters or search differently.',
-                    actionLabel: 'Clear Filters',
-                    onAction: () {
-                      setState(() {
-                        _inStockOnly = false;
-                        _oemOnly = false;
-                        _priceRange = const RangeValues(0, 50000);
-                        _selectedBrand = null;
-                      });
-                      _reload();
-                    },
-                  )
+              icon: Icons.search_off,
+              title: 'No parts found',
+              subtitle: 'Try adjusting your filters or search differently.',
+              actionLabel: 'Clear Filters',
+              onAction: () {
+                setState(() {
+                  _inStockOnly = false;
+                  _oemOnly = false;
+                  _priceRange = const RangeValues(0, 50000);
+                  _selectedBrand = null;
+                });
+                _reload();
+              },
+            )
                 : _isGridView
                 ? _GridBody(
-                    parts: parts,
-                    scrollCtrl: _scrollCtrl,
-                    isLoadingMore: isLoadingMore,
-                  )
+              parts: parts,
+              scrollCtrl: _scrollCtrl,
+              isLoadingMore: isLoadingMore,
+            )
                 : _ListBody(
-                    parts: parts,
-                    scrollCtrl: _scrollCtrl,
-                    isLoadingMore: isLoadingMore,
-                  ),
+              parts: parts,
+              scrollCtrl: _scrollCtrl,
+              isLoadingMore: isLoadingMore,
+            ),
           ),
         ],
       ),
@@ -311,25 +277,21 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColorsDark.bgSection : AppColorsLight.bgSection,
+        color: isDark ? AppColorsDark.bgSection : AppColorsLight.bgSection,
         border: Border(
-          bottom: BorderSide(
-            color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
-          ),
+          bottom: BorderSide(color: isDark ? AppColorsDark.border : AppColorsLight.border),
         ),
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          // Sort
           _BarChip(icon: Icons.sort, label: sortLabel, onTap: onSort),
           const SizedBox(width: 8),
-          // Filters
           _BarChip(
             icon: Icons.tune,
             label: 'Filters',
@@ -338,14 +300,8 @@ class _FilterBar extends StatelessWidget {
             onTap: onFilter,
           ),
           const SizedBox(width: 8),
-          // In Stock quick toggle
-          _BarChip(
-            label: 'In Stock',
-            isActive: inStockOnly,
-            onTap: onToggleInStock,
-          ),
+          _BarChip(label: 'In Stock', isActive: inStockOnly, onTap: onToggleInStock),
           const SizedBox(width: 8),
-          // OEM quick toggle
           _BarChip(label: 'OEM', isActive: oemOnly, onTap: onToggleOem),
         ],
       ),
@@ -370,7 +326,10 @@ class _BarChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = AppColors.primary;
+    final inactiveColor = isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -378,38 +337,26 @@ class _BarChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : (isDarkMode ? AppColorsDark.bgCard : AppColorsLight.bgCard),
+              ? activeColor.withValues(alpha: 0.12)
+              : (isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive
-                ? AppColors.primary.withValues(alpha: 0.5)
-                : (isDarkMode ? AppColorsDark.border : AppColorsLight.border),
+                ? activeColor.withValues(alpha: 0.5)
+                : (isDark ? AppColorsDark.border : AppColorsLight.border),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: 13,
-                color: isActive
-                    ? AppColors.primary
-                    : (isDarkMode
-                          ? AppColorsDark.textSecondary
-                          : AppColorsLight.textSecondary),
-              ),
+              Icon(icon, size: 13, color: isActive ? activeColor : inactiveColor),
               const SizedBox(width: 5),
             ],
             Text(
               label,
-              style: AppTextStyles.labelSm(isDarkMode).copyWith(
-                color: isActive
-                    ? AppColors.primary
-                    : (isDarkMode
-                          ? AppColorsDark.textSecondary
-                          : AppColorsLight.textSecondary),
+              style: AppTextStyles.labelSm(isDark).copyWith(
+                color: isActive ? activeColor : inactiveColor,
                 fontSize: 11,
               ),
             ),
@@ -418,18 +365,11 @@ class _BarChip extends StatelessWidget {
               Container(
                 width: 16,
                 height: 16,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                 child: Center(
                   child: Text(
                     badge!,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                 ),
               ),
@@ -448,11 +388,7 @@ class _GridBody extends StatelessWidget {
   final ScrollController scrollCtrl;
   final bool isLoadingMore;
 
-  const _GridBody({
-    required this.parts,
-    required this.scrollCtrl,
-    required this.isLoadingMore,
-  });
+  const _GridBody({required this.parts, required this.scrollCtrl, required this.isLoadingMore});
 
   @override
   Widget build(BuildContext context) {
@@ -482,19 +418,15 @@ class _GridBody extends StatelessWidget {
           onTap: () => context.push(AppRoutes.partDetailPath(p.id)),
           onAddToCart: p.stock > 0
               ? () => context.read<CartProvider>().addItem(
-                  partId: p.id,
-                  sellerId: p.sellerListings.isNotEmpty
-                      ? p.sellerListings.first.sellerId
-                      : '',
-                  partName: p.name,
-                  partSku: p.sku,
-                  partImage: p.images.isNotEmpty ? p.images.first : null,
-                  sellerName: p.sellerListings.isNotEmpty
-                      ? p.sellerListings.first.sellerName
-                      : '',
-                  price: p.price,
-                  mrp: p.mrp,
-                )
+            partId: p.id,
+            sellerId: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerId : '',
+            partName: p.name,
+            partSku: p.sku,
+            partImage: p.images.isNotEmpty ? p.images.first : null,
+            sellerName: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerName : '',
+            price: p.price,
+            mrp: p.mrp,
+          )
               : null,
         );
       },
@@ -509,36 +441,33 @@ class _ListBody extends StatelessWidget {
   final ScrollController scrollCtrl;
   final bool isLoadingMore;
 
-  const _ListBody({
-    required this.parts,
-    required this.scrollCtrl,
-    required this.isLoadingMore,
-  });
+  const _ListBody({required this.parts, required this.scrollCtrl, required this.isLoadingMore});
 
-  String _fmt(double v) =>
-      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+  String _fmt(double v) => '₹${v.toStringAsFixed(0).replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (m) => '${m[1]},',
+  )}';
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.separated(
       controller: scrollCtrl,
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       itemCount: parts.length + (isLoadingMore ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         if (i >= parts.length) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
+              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
             ),
           );
         }
+
         final p = parts[i];
         final discount = (p.mrp != null && p.mrp! > p.price)
             ? (((p.mrp! - p.price) / p.mrp!) * 100).round()
@@ -548,40 +477,29 @@ class _ListBody extends StatelessWidget {
           onTap: () => context.push(AppRoutes.partDetailPath(p.id)),
           child: Container(
             decoration: BoxDecoration(
-              color: isDarkMode ? AppColorsDark.bgCard : AppColorsLight.bgCard,
+              color: isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard,
               borderRadius: AppRadius.cardRadius,
-              border: Border.all(
-                color: isDarkMode
-                    ? AppColorsDark.border
-                    : AppColorsLight.border,
-              ),
+              border: Border.all(color: isDark ? AppColorsDark.border : AppColorsLight.border),
             ),
             child: Row(
               children: [
                 // Image
                 ClipRRect(
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(12),
-                  ),
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
                   child: Container(
                     width: 100,
                     height: 100,
-                    color: isDarkMode
-                        ? AppColorsDark.bgInput
-                        : AppColorsLight.bgInput,
+                    color: isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput,
                     child: p.images.isNotEmpty
                         ? Image.network(p.images.first, fit: BoxFit.contain)
-                        : Center(
-                            child: Icon(
-                              Icons.settings_outlined,
-                              size: 32,
-                              color: isDarkMode
-                                  ? AppColorsDark.textMuted
-                                  : AppColorsLight.textMuted,
-                            ),
-                          ),
+                        : Icon(
+                      Icons.settings_outlined,
+                      size: 32,
+                      color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
+                    ),
                   ),
                 ),
+
                 // Info
                 Expanded(
                   child: Padding(
@@ -590,18 +508,16 @@ class _ListBody extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          p.brand.name.isNotEmpty ? p.brand.name : "Unknown",
-                          style: AppTextStyles.labelXs(isDarkMode).copyWith(
-                            color: isDarkMode
-                                ? AppColorsDark.textMuted
-                                : AppColorsLight.textMuted,
+                          p.brand.name.isNotEmpty ? p.brand.name : 'Unknown',
+                          style: AppTextStyles.labelXs(isDark).copyWith(
+                            color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
                             letterSpacing: 0.8,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           p.name,
-                          style: AppTextStyles.labelMd(isDarkMode),
+                          style: AppTextStyles.labelMd(isDark),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -611,10 +527,7 @@ class _ListBody extends StatelessWidget {
                             children: [
                               StarRatingWidget(rating: p.rating!, size: 12),
                               const SizedBox(width: 4),
-                              Text(
-                                '(${p.reviewCount})',
-                                style: AppTextStyles.bodyXs(isDarkMode),
-                              ),
+                              Text('(${p.reviewCount})', style: AppTextStyles.bodyXs(isDark)),
                             ],
                           ),
                         const SizedBox(height: 6),
@@ -623,19 +536,13 @@ class _ListBody extends StatelessWidget {
                             Text(_fmt(p.price), style: AppTextStyles.priceSm()),
                             if (p.mrp != null && p.mrp! > p.price) ...[
                               const SizedBox(width: 6),
-                              Text(
-                                _fmt(p.mrp!),
-                                style: AppTextStyles.strikethrough(isDarkMode),
-                              ),
+                              Text(_fmt(p.mrp!), style: AppTextStyles.strikethrough(isDark)),
                               const SizedBox(width: 6),
                               Text(
                                 '$discount% off',
-                                style: AppTextStyles.labelXs(isDarkMode)
-                                    .copyWith(
-                                      color: isDarkMode
-                                          ? AppColorsDark.success
-                                          : AppColorsLight.success,
-                                    ),
+                                style: AppTextStyles.labelXs(isDark).copyWith(
+                                  color: isDark ? AppColorsDark.success : AppColorsLight.success,
+                                ),
                               ),
                             ],
                           ],
@@ -643,69 +550,17 @@ class _ListBody extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: p.stock > 0
-                                    ? (isDarkMode
-                                          ? AppColorsDark.success.withValues(
-                                              alpha: 0.1,
-                                            )
-                                          : AppColorsLight.success.withValues(
-                                              alpha: 0.1,
-                                            ))
-                                    : (isDarkMode
-                                          ? AppColorsDark.error.withValues(
-                                              alpha: 0.1,
-                                            )
-                                          : AppColorsLight.error.withValues(
-                                              alpha: 0.1,
-                                            )),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                p.stock > 0 ? 'In Stock' : 'Out of Stock',
-                                style: AppTextStyles.labelXs(isDarkMode)
-                                    .copyWith(
-                                      color: p.stock > 0
-                                          ? (isDarkMode
-                                                ? AppColorsDark.success
-                                                : AppColorsLight.success)
-                                          : (isDarkMode
-                                                ? AppColorsDark.error
-                                                : AppColorsLight.error),
-                                    ),
-                              ),
+                            _Badge(
+                              label: p.stock > 0 ? 'In Stock' : 'Out of Stock',
+                              color: p.stock > 0
+                                  ? (isDark ? AppColorsDark.success : AppColorsLight.success)
+                                  : (isDark ? AppColorsDark.error : AppColorsLight.error),
                             ),
                             if (p.partType == 'OEM') ...[
                               const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode
-                                      ? AppColorsDark.info.withValues(
-                                          alpha: 0.1,
-                                        )
-                                      : AppColorsLight.info.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'OEM',
-                                  style: AppTextStyles.labelXs(isDarkMode)
-                                      .copyWith(
-                                        color: isDarkMode
-                                            ? AppColorsDark.info
-                                            : AppColorsLight.info,
-                                      ),
-                                ),
+                              _Badge(
+                                label: 'OEM',
+                                color: isDark ? AppColorsDark.info : AppColorsLight.info,
                               ),
                             ],
                           ],
@@ -714,43 +569,34 @@ class _ListBody extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 // Cart button
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: GestureDetector(
                     onTap: p.stock > 0
                         ? () => context.read<CartProvider>().addItem(
-                            partId: p.id,
-                            sellerId: p.sellerListings.isNotEmpty
-                                ? p.sellerListings.first.sellerId
-                                : '',
-                            partName: p.name,
-                            partSku: p.sku,
-                            partImage: p.images.isNotEmpty
-                                ? p.images.first
-                                : null,
-                            sellerName: p.sellerListings.isNotEmpty
-                                ? p.sellerListings.first.sellerName
-                                : '',
-                            price: p.price,
-                            mrp: p.mrp,
-                          )
+                      partId: p.id,
+                      sellerId: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerId : '',
+                      partName: p.name,
+                      partSku: p.sku,
+                      partImage: p.images.isNotEmpty ? p.images.first : null,
+                      sellerName: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerName : '',
+                      price: p.price,
+                      mrp: p.mrp,
+                    )
                         : null,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: p.stock > 0
                             ? AppColors.primary.withValues(alpha: 0.1)
-                            : (isDarkMode
-                                  ? AppColorsDark.bgInput
-                                  : AppColorsLight.bgInput),
+                            : (isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: p.stock > 0
                               ? AppColors.primary.withValues(alpha: 0.3)
-                              : (isDarkMode
-                                    ? AppColorsDark.border
-                                    : AppColorsLight.border),
+                              : (isDark ? AppColorsDark.border : AppColorsLight.border),
                         ),
                       ),
                       child: Icon(
@@ -758,9 +604,7 @@ class _ListBody extends StatelessWidget {
                         size: 18,
                         color: p.stock > 0
                             ? AppColors.primary
-                            : (isDarkMode
-                                  ? AppColorsDark.textMuted
-                                  : AppColorsLight.textMuted),
+                            : (isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted),
                       ),
                     ),
                   ),
@@ -770,6 +614,32 @@ class _ListBody extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _Badge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'DMSans',
+          fontWeight: FontWeight.w600,
+          fontSize: 10,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -804,101 +674,46 @@ class _ShimmerCardState extends State<_ShimmerCard>
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, _) => Container(
-        decoration: BoxDecoration(
-          color: isDarkMode
-              ? AppColorsDark.bgCard.withValues(alpha: _anim.value)
-              : AppColorsLight.bgCard.withValues(alpha: _anim.value),
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(
-            color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
+      builder: (_, __) {
+        final shimmer = isDark
+            ? AppColorsDark.bgInput.withValues(alpha: _anim.value)
+            : AppColorsLight.bgInput.withValues(alpha: _anim.value);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColorsDark.bgCard.withValues(alpha: _anim.value)
+                : AppColorsLight.bgCard.withValues(alpha: _anim.value),
+            borderRadius: AppRadius.cardRadius,
+            border: Border.all(color: isDark ? AppColorsDark.border : AppColorsLight.border),
           ),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Container(
-                color: isDarkMode
-                    ? AppColorsDark.bgInput.withValues(alpha: _anim.value)
-                    : AppColorsLight.bgInput.withValues(alpha: _anim.value),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 10,
-                      width: 60,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppColorsDark.bgInput.withValues(
-                                alpha: _anim.value,
-                              )
-                            : AppColorsLight.bgInput.withValues(
-                                alpha: _anim.value,
-                              ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppColorsDark.bgInput.withValues(
-                                alpha: _anim.value,
-                              )
-                            : AppColorsLight.bgInput.withValues(
-                                alpha: _anim.value,
-                              ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      height: 12,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppColorsDark.bgInput.withValues(
-                                alpha: _anim.value,
-                              )
-                            : AppColorsLight.bgInput.withValues(
-                                alpha: _anim.value,
-                              ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      height: 14,
-                      width: 70,
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppColorsDark.bgInput.withValues(
-                                alpha: _anim.value,
-                              )
-                            : AppColorsLight.bgInput.withValues(
-                                alpha: _anim.value,
-                              ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
+          child: Column(
+            children: [
+              Expanded(flex: 5, child: Container(color: shimmer)),
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 10, width: 60, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(height: 6),
+                      Container(height: 12, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      const SizedBox(height: 4),
+                      Container(height: 12, width: 100, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      const Spacer(),
+                      Container(height: 14, width: 70, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -913,38 +728,25 @@ class _SortSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sort by', style: AppTextStyles.heading(isDarkMode)),
+          Text('Sort by', style: AppTextStyles.heading(isDark)),
           const SizedBox(height: 16),
           ..._SortBy.values.map(
-            (s) => InkWell(
+                (s) => InkWell(
               onTap: () => onSelect(s),
               borderRadius: BorderRadius.circular(10),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 13,
-                  horizontal: 4,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        s.label,
-                        style: AppTextStyles.bodyMd(isDarkMode),
-                      ),
-                    ),
-                    if (s == current)
-                      const Icon(
-                        Icons.check_circle,
-                        color: AppColors.primary,
-                        size: 18,
-                      ),
+                    Expanded(child: Text(s.label, style: AppTextStyles.bodyMd(isDark))),
+                    if (s == current) const Icon(Icons.check_circle, color: AppColors.primary, size: 18),
                   ],
                 ),
               ),
@@ -984,16 +786,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late RangeValues _price;
   String? _brand;
 
-  static const _brands = [
-    'Bosch',
-    'Exide',
-    'Mahle',
-    'Minda',
-    'Monroe',
-    'Lumax',
-    'NGK',
-    'Valeo',
-  ];
+  static const _brands = ['Bosch', 'Exide', 'Mahle', 'Minda', 'Monroe', 'Lumax', 'NGK', 'Valeo'];
 
   @override
   void initState() {
@@ -1004,12 +797,14 @@ class _FilterSheetState extends State<_FilterSheet> {
     _brand = widget.selectedBrand;
   }
 
-  String _fmt(double v) =>
-      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+  String _fmt(double v) => '₹${v.toStringAsFixed(0).replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (m) => '${m[1]},',
+  )}';
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.75,
@@ -1018,44 +813,32 @@ class _FilterSheetState extends State<_FilterSheet> {
         controller: ctrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          // Handle
           Center(
             child: Container(
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: isDarkMode
-                    ? AppColorsDark.border
-                    : AppColorsLight.border,
+                color: isDark ? AppColorsDark.border : AppColorsLight.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Filters',
-                  style: AppTextStyles.heading(isDarkMode),
-                ),
-              ),
+              Expanded(child: Text('Filters', style: AppTextStyles.heading(isDark))),
               GestureDetector(
                 onTap: widget.onReset,
                 child: Text(
                   'Reset all',
-                  style: AppTextStyles.bodySm(
-                    isDarkMode,
-                  ).copyWith(color: AppColors.primary),
+                  style: AppTextStyles.bodySm(isDark).copyWith(color: AppColors.primary),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
 
-          // ── Availability ───────────────────────────────
-          Text('Availability', style: AppTextStyles.labelMd(isDarkMode)),
+          Text('Availability', style: AppTextStyles.labelMd(isDark)),
           const SizedBox(height: 10),
           _FilterToggleRow(
             label: 'In Stock only',
@@ -1064,8 +847,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 16),
 
-          // ── Part Type ──────────────────────────────────
-          Text('Part Type', style: AppTextStyles.labelMd(isDarkMode)),
+          Text('Part Type', style: AppTextStyles.labelMd(isDark)),
           const SizedBox(height: 10),
           _FilterToggleRow(
             label: 'OEM / Genuine only',
@@ -1074,21 +856,13 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 20),
 
-          // ── Price Range ────────────────────────────────
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Price Range',
-                  style: AppTextStyles.labelMd(isDarkMode),
-                ),
-              ),
+              Expanded(child: Text('Price Range', style: AppTextStyles.labelMd(isDark))),
               Text(
                 '${_fmt(_price.start)} — ${_fmt(_price.end)}',
-                style: AppTextStyles.bodySm(isDarkMode).copyWith(
-                  color: isDarkMode
-                      ? AppColorsDark.textSecondary
-                      : AppColorsLight.textSecondary,
+                style: AppTextStyles.bodySm(isDark).copyWith(
+                  color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
                 ),
               ),
             ],
@@ -1097,14 +871,10 @@ class _FilterSheetState extends State<_FilterSheet> {
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: AppColors.primary,
-              inactiveTrackColor: isDarkMode
-                  ? AppColorsDark.bgInput
-                  : AppColorsLight.bgInput,
+              inactiveTrackColor: isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput,
               thumbColor: AppColors.primary,
               overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              rangeThumbShape: const RoundRangeSliderThumbShape(
-                enabledThumbRadius: 8,
-              ),
+              rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
               trackHeight: 3,
             ),
             child: RangeSlider(
@@ -1117,8 +887,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 16),
 
-          // ── Brand ──────────────────────────────────────
-          Text('Brand', style: AppTextStyles.labelMd(isDarkMode)),
+          Text('Brand', style: AppTextStyles.labelMd(isDark)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1128,33 +897,24 @@ class _FilterSheetState extends State<_FilterSheet> {
               return GestureDetector(
                 onTap: () => setState(() => _brand = selected ? null : b),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.12)
-                        : (isDarkMode
-                              ? AppColorsDark.bgInput
-                              : AppColorsLight.bgInput),
+                        : (isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: selected
                           ? AppColors.primary.withValues(alpha: 0.5)
-                          : (isDarkMode
-                                ? AppColorsDark.border
-                                : AppColorsLight.border),
+                          : (isDark ? AppColorsDark.border : AppColorsLight.border),
                     ),
                   ),
                   child: Text(
                     b,
-                    style: AppTextStyles.labelSm(isDarkMode).copyWith(
+                    style: AppTextStyles.labelSm(isDark).copyWith(
                       color: selected
                           ? AppColors.primary
-                          : (isDarkMode
-                                ? AppColorsDark.textSecondary
-                                : AppColorsLight.textSecondary),
+                          : (isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary),
                       fontSize: 12,
                     ),
                   ),
@@ -1164,7 +924,6 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 28),
 
-          // ── Apply button ───────────────────────────────
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1172,11 +931,12 @@ class _FilterSheetState extends State<_FilterSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Apply Filters', style: AppTextStyles.buttonSm),
+              child: const Text(
+                'Apply Filters',
+                style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+              ),
             ),
           ),
         ],
@@ -1190,20 +950,16 @@ class _FilterToggleRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _FilterToggleRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
+  const _FilterToggleRow({required this.label, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppTextStyles.bodyMd(isDarkMode))),
+          Expanded(child: Text(label, style: AppTextStyles.bodyMd(isDark))),
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 22,
@@ -1214,15 +970,11 @@ class _FilterToggleRow extends StatelessWidget {
               border: Border.all(
                 color: value
                     ? AppColors.primary
-                    : (isDarkMode
-                          ? AppColorsDark.border
-                          : AppColorsLight.border),
+                    : (isDark ? AppColorsDark.border : AppColorsLight.border),
                 width: 1.5,
               ),
             ),
-            child: value
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
-                : null,
+            child: value ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
           ),
         ],
       ),

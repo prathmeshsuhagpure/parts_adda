@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parts_adda/features/catalog/presentation/screens/categories_screen.dart';
+import 'package:parts_adda/features/catalog/presentation/screens/all_categories_screen.dart';
 import 'package:parts_adda/features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/b2b_register_screen.dart';
+import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/catalog/presentation/screens/sub_category_screen.dart';
 import '../../features/dealer/presentation/screens/dashboard_screen.dart';
 import '../../features/dealer/presentation/screens/inventory_screen.dart';
@@ -18,7 +19,7 @@ import '../../features/products/presentation/screens/add_product_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/search/presentation/screens/filter_screen.dart';
 import '../../features/catalog/presentation/screens/category_screen.dart';
-import '../../features/catalog/presentation/screens/part_detail_screen.dart';
+import '../../features/parts/presentation/screens/part_detail_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
 import '../../features/checkout/presentation/screens/checkout_screen.dart';
 import '../../features/checkout/presentation/screens/address_screen.dart';
@@ -44,7 +45,9 @@ class AppRouter {
     debugLabel: 'dealerShell',
   );
 
-  static GoRouter router(AuthProvider authProvider) => GoRouter(
+  static GoRouter router(
+    AuthProvider authProvider
+  ) => GoRouter(
     navigatorKey: _rootKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,

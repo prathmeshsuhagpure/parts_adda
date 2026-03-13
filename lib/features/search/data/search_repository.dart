@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:parts_adda/core/api/api_endpoints.dart';
-import '../../catalog/domain/models/part_model.dart';
+import '../../parts/domain/models/part_model.dart';
 
 class SearchRepository {
   final Dio dio;

@@ -22,6 +22,9 @@ class UserRepository {
     String? name,
     String? email,
     String? avatar,
+    String? dateOfBirth,
+    String? phone,
+    String? gender,
   }) async {
     try {
       final res = await dio.put(
@@ -30,6 +33,9 @@ class UserRepository {
           if (name != null) "name": name,
           if (email != null) "email": email,
           if (avatar != null) "avatar": avatar,
+          if (dateOfBirth != null) "dateOfBirth": dateOfBirth,
+          if (phone != null) "phone": phone,
+          if (gender != null) "gender": gender,
         },
       );
 
@@ -65,10 +71,8 @@ class UserRepository {
     }
   }
 
-  Future<AddressModel> updateAddress(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
+  Future<AddressModel> updateAddress(String id,
+      Map<String, dynamic> data,) async {
     try {
       final res = await dio.put(ApiEndpoints.updateAddress(id), data: data);
 
@@ -99,33 +103,21 @@ class UserRepository {
   }
 
   Future<List<VehicleModel>> getVehicles() async {
-    try {
-      final res = await dio.get('/user/vehicles');
+    final res = await dio.get(ApiEndpoints.getVehicles);
 
-      return (res.data['vehicles'] as List)
-          .map((e) => VehicleModel.fromJson(e))
-          .toList();
-    } catch (e) {
-      throw Exception('Failed to load vehicles');
-    }
+    return (res.data['data']['vehicles'] as List)
+        .map((e) => VehicleModel.fromJson(e))
+        .toList();
   }
 
   Future<VehicleModel> addVehicle(Map<String, dynamic> data) async {
-    try {
-      final res = await dio.post('/user/vehicles', data: data);
+    final res = await dio.post(ApiEndpoints.addVehicle, data: data);
 
-      return VehicleModel.fromJson(res.data['vehicle']);
-    } catch (e) {
-      throw Exception('Failed to add vehicle');
-    }
+    return VehicleModel.fromJson(res.data['data']['vehicle']);
   }
 
   Future<void> removeVehicle(String id) async {
-    try {
-      await dio.delete('/user/vehicles/$id');
-    } catch (e) {
-      throw Exception('Failed to remove vehicle');
-    }
+    await dio.delete(ApiEndpoints.removeVehicle(id));
   }
 
   Future<List<dynamic>> getWishlist() async {
