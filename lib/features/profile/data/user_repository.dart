@@ -123,15 +123,25 @@ class UserRepository {
   Future<List<dynamic>> getWishlist() async {
     try {
       final res = await dio.get(ApiEndpoints.wishlist);
-      return res.data['wishlist'];
+      return res.data['data']['wishlist'];
     } catch (e) {
       throw Exception('Failed to load wishlist');
     }
   }
 
+  Future<Map<String, dynamic>> toggleWishlist(String partId) async {
+    final res = await dio.post(ApiEndpoints.wishlistItem(partId));
+
+    if (res.data['success'] == true) {
+      return res.data['data'];
+    } else {
+      throw Exception("Wishlist operation failed");
+    }
+  }
+
   Future<Map<String, dynamic>> addToWishlist(String partId) async {
     try {
-      final res = await dio.post('/user/wishlist', data: {"part_id": partId});
+      final res = await dio.post(ApiEndpoints.wishlistItem(partId));
 
       return res.data['part'];
     } catch (e) {

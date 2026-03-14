@@ -134,15 +134,22 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   Color get _bg => _isDark ? AppColorsDark.bg : AppColorsLight.bg;
+
   Color get _bgCard => _isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
+
   Color get _bgInput =>
       _isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput;
+
   Color get _border => _isDark ? AppColorsDark.border : AppColorsLight.border;
+
   Color get _textPri =>
       _isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary;
+
   Color get _textSec =>
       _isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary;
+
   Color get _textMut =>
       _isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted;
 
@@ -1599,17 +1606,29 @@ class _GridCard extends StatelessWidget {
                   top: 6,
                   right: 6,
                   child: GestureDetector(
-                    onTap: onToggleWishlist,
+                    onTap: () {
+                      context.read<ProfileProvider>().toggleWishlist(part.id);
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: const BoxDecoration(
                         color: Colors.black45,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        wishlisted ? Icons.favorite : Icons.favorite_border,
-                        size: 14,
-                        color: wishlisted ? AppColors.primary : Colors.white,
+                      child: Consumer<ProfileProvider>(
+                        builder: (context, provider, _) {
+                          final isWishlisted = provider.isWishlisted(part.id);
+
+                          return Icon(
+                            isWishlisted
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 14,
+                            color: isWishlisted
+                                ? AppColors.primary
+                                : Colors.white,
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -1849,25 +1868,39 @@ class _ListCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       GestureDetector(
-                        onTap: onToggleWishlist,
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: wishlisted
-                                ? AppColors.primary.withValues(alpha: 0.1)
-                                : bgInput,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: wishlisted
-                                  ? AppColors.primary.withValues(alpha: 0.3)
-                                  : border,
-                            ),
-                          ),
-                          child: Icon(
-                            wishlisted ? Icons.favorite : Icons.favorite_border,
-                            size: 15,
-                            color: wishlisted ? AppColors.primary : textMut,
-                          ),
+                        onTap: () {
+                          context.read<ProfileProvider>().toggleWishlist(
+                            part.id,
+                          );
+                        },
+                        child: Consumer<ProfileProvider>(
+                          builder: (context, provider, _) {
+                            final isWishlisted = provider.isWishlisted(part.id);
+
+                            return Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: isWishlisted
+                                    ? AppColors.primary.withValues(alpha: 0.1)
+                                    : bgInput,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isWishlisted
+                                      ? AppColors.primary.withValues(alpha: 0.3)
+                                      : border,
+                                ),
+                              ),
+                              child: Icon(
+                                isWishlisted
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                size: 15,
+                                color: isWishlisted
+                                    ? AppColors.primary
+                                    : textMut,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(width: 7),
@@ -1898,10 +1931,6 @@ class _ListCard extends StatelessWidget {
     );
   }
 }
-
-// ═════════════════════════════════════════════════════════════
-// Idle State
-// ═════════════════════════════════════════════════════════════
 
 class _IdleState extends StatelessWidget {
   final bool isDark;

@@ -21,6 +21,7 @@ class CategoryProvider extends ChangeNotifier {
   int _totalParts = 0;
   int _currentPage = 1;
   bool _hasMore = true;
+  CatalogStatus _categoryStatus = CatalogStatus.initial;
 
   // ── Error
   String? _error;
@@ -50,6 +51,10 @@ class CategoryProvider extends ChangeNotifier {
 
   String? get error => _error;
 
+  CatalogStatus get categoryStatus => _categoryStatus;
+
+  bool get isCategoryLoading => _categoryStatus == CatalogStatus.loading;
+
   // ─────────────────────────────────────────────────────────
   // Load Part Detail
   // ─────────────────────────────────────────────────────────
@@ -67,9 +72,6 @@ class CategoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─────────────────────────────────────────────────────────
-  // Load category listing (first page)
-  // ─────────────────────────────────────────────────────────
   Future<void> loadCategory({
     required String categoryId,
     Map<String, dynamic>? filters,
@@ -125,12 +127,15 @@ class CategoryProvider extends ChangeNotifier {
   }
 
   Future<void> loadCategories() async {
+    _categoryStatus = CatalogStatus.loading;
     _error = null;
     notifyListeners();
 
     try {
       _categories = await _repo.getRootCategories();
+      _categoryStatus = CatalogStatus.loaded;
     } catch (e) {
+      _categoryStatus = CatalogStatus.error;
       _error = e.toString();
     }
     notifyListeners();

@@ -24,12 +24,6 @@ extension _SortLabel on _SortBy {
   };
 }
 
-// ═════════════════════════════════════════════════════════════
-// CategoryScreen — shows parts for a given category/sub-category.
-// Reached from SubCategoryScreen when the user taps "Browse All"
-// or taps a leaf sub-category.
-// ═════════════════════════════════════════════════════════════
-
 class CategoryScreen extends StatefulWidget {
   final String categoryId;
   final String categoryName;
@@ -65,9 +59,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   int get _activeFilterCount =>
       (_inStockOnly ? 1 : 0) +
-          (_oemOnly ? 1 : 0) +
-          (_selectedBrand != null ? 1 : 0) +
-          (_priceRange.start > 0 || _priceRange.end < 50000 ? 1 : 0);
+      (_oemOnly ? 1 : 0) +
+      (_selectedBrand != null ? 1 : 0) +
+      (_priceRange.start > 0 || _priceRange.end < 50000 ? 1 : 0);
 
   @override
   void initState() {
@@ -173,7 +167,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
           child: Icon(
             Icons.arrow_back_ios_new,
             size: 18,
-            color: isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary,
+            color: isDark
+                ? AppColorsDark.textPrimary
+                : AppColorsLight.textPrimary,
           ),
         ),
         title: Column(
@@ -184,7 +180,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
               Text(
                 '$total parts found',
                 style: AppTextStyles.bodyXs(isDark).copyWith(
-                  color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
+                  color: isDark
+                      ? AppColorsDark.textMuted
+                      : AppColorsLight.textMuted,
                 ),
               ),
           ],
@@ -196,7 +194,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
               padding: const EdgeInsets.all(12),
               child: Icon(
                 Icons.search,
-                color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
+                color: isDark
+                    ? AppColorsDark.textSecondary
+                    : AppColorsLight.textSecondary,
                 size: 20,
               ),
             ),
@@ -206,8 +206,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Icon(
-                _isGridView ? Icons.view_list_outlined : Icons.grid_view_outlined,
-                color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
+                _isGridView
+                    ? Icons.view_list_outlined
+                    : Icons.grid_view_outlined,
+                color: isDark
+                    ? AppColorsDark.textSecondary
+                    : AppColorsLight.textSecondary,
                 size: 20,
               ),
             ),
@@ -225,41 +229,50 @@ class _CategoryScreenState extends State<CategoryScreen> {
             oemOnly: _oemOnly,
             onSort: _openSortSheet,
             onFilter: _openFilterSheet,
-            onToggleInStock: () { setState(() => _inStockOnly = !_inStockOnly); _reload(); },
-            onToggleOem: () { setState(() => _oemOnly = !_oemOnly); _reload(); },
+            onToggleInStock: () {
+              setState(() => _inStockOnly = !_inStockOnly);
+              _reload();
+            },
+            onToggleOem: () {
+              setState(() => _oemOnly = !_oemOnly);
+              _reload();
+            },
           ),
 
           // ── Parts list / grid ────────────────────────────────
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
                 : parts.isEmpty
                 ? EmptyStateWidget(
-              icon: Icons.search_off,
-              title: 'No parts found',
-              subtitle: 'Try adjusting your filters or search differently.',
-              actionLabel: 'Clear Filters',
-              onAction: () {
-                setState(() {
-                  _inStockOnly = false;
-                  _oemOnly = false;
-                  _priceRange = const RangeValues(0, 50000);
-                  _selectedBrand = null;
-                });
-                _reload();
-              },
-            )
+                    icon: Icons.search_off,
+                    title: 'No parts found',
+                    subtitle:
+                        'Try adjusting your filters or search differently.',
+                    actionLabel: 'Clear Filters',
+                    onAction: () {
+                      setState(() {
+                        _inStockOnly = false;
+                        _oemOnly = false;
+                        _priceRange = const RangeValues(0, 50000);
+                        _selectedBrand = null;
+                      });
+                      _reload();
+                    },
+                  )
                 : _isGridView
                 ? _GridBody(
-              parts: parts,
-              scrollCtrl: _scrollCtrl,
-              isLoadingMore: isLoadingMore,
-            )
+                    parts: parts,
+                    scrollCtrl: _scrollCtrl,
+                    isLoadingMore: isLoadingMore,
+                  )
                 : _ListBody(
-              parts: parts,
-              scrollCtrl: _scrollCtrl,
-              isLoadingMore: isLoadingMore,
-            ),
+                    parts: parts,
+                    scrollCtrl: _scrollCtrl,
+                    isLoadingMore: isLoadingMore,
+                  ),
           ),
         ],
       ),
@@ -294,7 +307,9 @@ class _FilterBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColorsDark.bgSection : AppColorsLight.bgSection,
         border: Border(
-          bottom: BorderSide(color: isDark ? AppColorsDark.border : AppColorsLight.border),
+          bottom: BorderSide(
+            color: isDark ? AppColorsDark.border : AppColorsLight.border,
+          ),
         ),
       ),
       child: ListView(
@@ -311,7 +326,11 @@ class _FilterBar extends StatelessWidget {
             onTap: onFilter,
           ),
           const SizedBox(width: 8),
-          _BarChip(label: 'In Stock', isActive: inStockOnly, onTap: onToggleInStock),
+          _BarChip(
+            label: 'In Stock',
+            isActive: inStockOnly,
+            onTap: onToggleInStock,
+          ),
           const SizedBox(width: 8),
           _BarChip(label: 'OEM', isActive: oemOnly, onTap: onToggleOem),
         ],
@@ -339,7 +358,9 @@ class _BarChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeColor = AppColors.primary;
-    final inactiveColor = isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary;
+    final inactiveColor = isDark
+        ? AppColorsDark.textSecondary
+        : AppColorsLight.textSecondary;
 
     return GestureDetector(
       onTap: onTap,
@@ -361,7 +382,11 @@ class _BarChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 13, color: isActive ? activeColor : inactiveColor),
+              Icon(
+                icon,
+                size: 13,
+                color: isActive ? activeColor : inactiveColor,
+              ),
               const SizedBox(width: 5),
             ],
             Text(
@@ -376,11 +401,18 @@ class _BarChip extends StatelessWidget {
               Container(
                 width: 16,
                 height: 16,
-                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
                 child: Center(
                   child: Text(
                     badge!,
-                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -399,7 +431,11 @@ class _GridBody extends StatelessWidget {
   final ScrollController scrollCtrl;
   final bool isLoadingMore;
 
-  const _GridBody({required this.parts, required this.scrollCtrl, required this.isLoadingMore});
+  const _GridBody({
+    required this.parts,
+    required this.scrollCtrl,
+    required this.isLoadingMore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -429,15 +465,19 @@ class _GridBody extends StatelessWidget {
           onTap: () => context.push(AppRoutes.partDetailPath(p.id)),
           onAddToCart: p.stock > 0
               ? () => context.read<CartProvider>().addItem(
-            partId: p.id,
-            sellerId: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerId : '',
-            partName: p.name,
-            partSku: p.sku,
-            partImage: p.images.isNotEmpty ? p.images.first : null,
-            sellerName: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerName : '',
-            price: p.price,
-            mrp: p.mrp,
-          )
+                  partId: p.id,
+                  sellerId: p.sellerListings.isNotEmpty
+                      ? p.sellerListings.first.sellerId
+                      : '',
+                  partName: p.name,
+                  partSku: p.sku,
+                  partImage: p.images.isNotEmpty ? p.images.first : null,
+                  sellerName: p.sellerListings.isNotEmpty
+                      ? p.sellerListings.first.sellerName
+                      : '',
+                  price: p.price,
+                  mrp: p.mrp,
+                )
               : null,
         );
       },
@@ -452,12 +492,14 @@ class _ListBody extends StatelessWidget {
   final ScrollController scrollCtrl;
   final bool isLoadingMore;
 
-  const _ListBody({required this.parts, required this.scrollCtrl, required this.isLoadingMore});
+  const _ListBody({
+    required this.parts,
+    required this.scrollCtrl,
+    required this.isLoadingMore,
+  });
 
-  String _fmt(double v) => '₹${v.toStringAsFixed(0).replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-  )}';
+  String _fmt(double v) =>
+      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
 
   @override
   Widget build(BuildContext context) {
@@ -468,13 +510,16 @@ class _ListBody extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       itemCount: parts.length + (isLoadingMore ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         if (i >= parts.length) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2,
+              ),
             ),
           );
         }
@@ -490,24 +535,32 @@ class _ListBody extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard,
               borderRadius: AppRadius.cardRadius,
-              border: Border.all(color: isDark ? AppColorsDark.border : AppColorsLight.border),
+              border: Border.all(
+                color: isDark ? AppColorsDark.border : AppColorsLight.border,
+              ),
             ),
             child: Row(
               children: [
                 // Image
                 ClipRRect(
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(12),
+                  ),
                   child: Container(
                     width: 100,
                     height: 100,
-                    color: isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput,
+                    color: isDark
+                        ? AppColorsDark.bgInput
+                        : AppColorsLight.bgInput,
                     child: p.images.isNotEmpty
                         ? Image.network(p.images.first, fit: BoxFit.contain)
                         : Icon(
-                      Icons.settings_outlined,
-                      size: 32,
-                      color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
-                    ),
+                            Icons.settings_outlined,
+                            size: 32,
+                            color: isDark
+                                ? AppColorsDark.textMuted
+                                : AppColorsLight.textMuted,
+                          ),
                   ),
                 ),
 
@@ -521,7 +574,9 @@ class _ListBody extends StatelessWidget {
                         Text(
                           p.brand.name.isNotEmpty ? p.brand.name : 'Unknown',
                           style: AppTextStyles.labelXs(isDark).copyWith(
-                            color: isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted,
+                            color: isDark
+                                ? AppColorsDark.textMuted
+                                : AppColorsLight.textMuted,
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -538,7 +593,10 @@ class _ListBody extends StatelessWidget {
                             children: [
                               StarRatingWidget(rating: p.rating!, size: 12),
                               const SizedBox(width: 4),
-                              Text('(${p.reviewCount})', style: AppTextStyles.bodyXs(isDark)),
+                              Text(
+                                '(${p.reviewCount})',
+                                style: AppTextStyles.bodyXs(isDark),
+                              ),
                             ],
                           ),
                         const SizedBox(height: 6),
@@ -547,12 +605,17 @@ class _ListBody extends StatelessWidget {
                             Text(_fmt(p.price), style: AppTextStyles.priceSm()),
                             if (p.mrp != null && p.mrp! > p.price) ...[
                               const SizedBox(width: 6),
-                              Text(_fmt(p.mrp!), style: AppTextStyles.strikethrough(isDark)),
+                              Text(
+                                _fmt(p.mrp!),
+                                style: AppTextStyles.strikethrough(isDark),
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 '$discount% off',
                                 style: AppTextStyles.labelXs(isDark).copyWith(
-                                  color: isDark ? AppColorsDark.success : AppColorsLight.success,
+                                  color: isDark
+                                      ? AppColorsDark.success
+                                      : AppColorsLight.success,
                                 ),
                               ),
                             ],
@@ -564,14 +627,20 @@ class _ListBody extends StatelessWidget {
                             _Badge(
                               label: p.stock > 0 ? 'In Stock' : 'Out of Stock',
                               color: p.stock > 0
-                                  ? (isDark ? AppColorsDark.success : AppColorsLight.success)
-                                  : (isDark ? AppColorsDark.error : AppColorsLight.error),
+                                  ? (isDark
+                                        ? AppColorsDark.success
+                                        : AppColorsLight.success)
+                                  : (isDark
+                                        ? AppColorsDark.error
+                                        : AppColorsLight.error),
                             ),
                             if (p.partType == 'OEM') ...[
                               const SizedBox(width: 6),
                               _Badge(
                                 label: 'OEM',
-                                color: isDark ? AppColorsDark.info : AppColorsLight.info,
+                                color: isDark
+                                    ? AppColorsDark.info
+                                    : AppColorsLight.info,
                               ),
                             ],
                           ],
@@ -587,27 +656,37 @@ class _ListBody extends StatelessWidget {
                   child: GestureDetector(
                     onTap: p.stock > 0
                         ? () => context.read<CartProvider>().addItem(
-                      partId: p.id,
-                      sellerId: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerId : '',
-                      partName: p.name,
-                      partSku: p.sku,
-                      partImage: p.images.isNotEmpty ? p.images.first : null,
-                      sellerName: p.sellerListings.isNotEmpty ? p.sellerListings.first.sellerName : '',
-                      price: p.price,
-                      mrp: p.mrp,
-                    )
+                            partId: p.id,
+                            sellerId: p.sellerListings.isNotEmpty
+                                ? p.sellerListings.first.sellerId
+                                : '',
+                            partName: p.name,
+                            partSku: p.sku,
+                            partImage: p.images.isNotEmpty
+                                ? p.images.first
+                                : null,
+                            sellerName: p.sellerListings.isNotEmpty
+                                ? p.sellerListings.first.sellerName
+                                : '',
+                            price: p.price,
+                            mrp: p.mrp,
+                          )
                         : null,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: p.stock > 0
                             ? AppColors.primary.withValues(alpha: 0.1)
-                            : (isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput),
+                            : (isDark
+                                  ? AppColorsDark.bgInput
+                                  : AppColorsLight.bgInput),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: p.stock > 0
                               ? AppColors.primary.withValues(alpha: 0.3)
-                              : (isDark ? AppColorsDark.border : AppColorsLight.border),
+                              : (isDark
+                                    ? AppColorsDark.border
+                                    : AppColorsLight.border),
                         ),
                       ),
                       child: Icon(
@@ -615,7 +694,9 @@ class _ListBody extends StatelessWidget {
                         size: 18,
                         color: p.stock > 0
                             ? AppColors.primary
-                            : (isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted),
+                            : (isDark
+                                  ? AppColorsDark.textMuted
+                                  : AppColorsLight.textMuted),
                       ),
                     ),
                   ),
@@ -632,6 +713,7 @@ class _ListBody extends StatelessWidget {
 class _Badge extends StatelessWidget {
   final String label;
   final Color color;
+
   const _Badge({required this.label, required this.color});
 
   @override
@@ -688,7 +770,7 @@ class _ShimmerCardState extends State<_ShimmerCard>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) {
+      builder: (_, _) {
         final shimmer = isDark
             ? AppColorsDark.bgInput.withValues(alpha: _anim.value)
             : AppColorsLight.bgInput.withValues(alpha: _anim.value);
@@ -698,7 +780,9 @@ class _ShimmerCardState extends State<_ShimmerCard>
                 ? AppColorsDark.bgCard.withValues(alpha: _anim.value)
                 : AppColorsLight.bgCard.withValues(alpha: _anim.value),
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: isDark ? AppColorsDark.border : AppColorsLight.border),
+            border: Border.all(
+              color: isDark ? AppColorsDark.border : AppColorsLight.border,
+            ),
           ),
           child: Column(
             children: [
@@ -710,13 +794,40 @@ class _ShimmerCardState extends State<_ShimmerCard>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(height: 10, width: 60, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      Container(
+                        height: 10,
+                        width: 60,
+                        decoration: BoxDecoration(
+                          color: shimmer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Container(height: 12, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      Container(
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: shimmer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Container(height: 12, width: 100, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      Container(
+                        height: 12,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: shimmer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
                       const Spacer(),
-                      Container(height: 14, width: 70, decoration: BoxDecoration(color: shimmer, borderRadius: BorderRadius.circular(4))),
+                      Container(
+                        height: 14,
+                        width: 70,
+                        decoration: BoxDecoration(
+                          color: shimmer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -749,15 +860,25 @@ class _SortSheet extends StatelessWidget {
           Text('Sort by', style: AppTextStyles.heading(isDark)),
           const SizedBox(height: 16),
           ..._SortBy.values.map(
-                (s) => InkWell(
+            (s) => InkWell(
               onTap: () => onSelect(s),
               borderRadius: BorderRadius.circular(10),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 13,
+                  horizontal: 4,
+                ),
                 child: Row(
                   children: [
-                    Expanded(child: Text(s.label, style: AppTextStyles.bodyMd(isDark))),
-                    if (s == current) const Icon(Icons.check_circle, color: AppColors.primary, size: 18),
+                    Expanded(
+                      child: Text(s.label, style: AppTextStyles.bodyMd(isDark)),
+                    ),
+                    if (s == current)
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
                   ],
                 ),
               ),
@@ -797,7 +918,16 @@ class _FilterSheetState extends State<_FilterSheet> {
   late RangeValues _price;
   String? _brand;
 
-  static const _brands = ['Bosch', 'Exide', 'Mahle', 'Minda', 'Monroe', 'Lumax', 'NGK', 'Valeo'];
+  static const _brands = [
+    'Bosch',
+    'Exide',
+    'Mahle',
+    'Minda',
+    'Monroe',
+    'Lumax',
+    'NGK',
+    'Valeo',
+  ];
 
   @override
   void initState() {
@@ -808,10 +938,8 @@ class _FilterSheetState extends State<_FilterSheet> {
     _brand = widget.selectedBrand;
   }
 
-  String _fmt(double v) => '₹${v.toStringAsFixed(0).replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-  )}';
+  String _fmt(double v) =>
+      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
 
   @override
   Widget build(BuildContext context) {
@@ -837,12 +965,16 @@ class _FilterSheetState extends State<_FilterSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Text('Filters', style: AppTextStyles.heading(isDark))),
+              Expanded(
+                child: Text('Filters', style: AppTextStyles.heading(isDark)),
+              ),
               GestureDetector(
                 onTap: widget.onReset,
                 child: Text(
                   'Reset all',
-                  style: AppTextStyles.bodySm(isDark).copyWith(color: AppColors.primary),
+                  style: AppTextStyles.bodySm(
+                    isDark,
+                  ).copyWith(color: AppColors.primary),
                 ),
               ),
             ],
@@ -869,11 +1001,18 @@ class _FilterSheetState extends State<_FilterSheet> {
 
           Row(
             children: [
-              Expanded(child: Text('Price Range', style: AppTextStyles.labelMd(isDark))),
+              Expanded(
+                child: Text(
+                  'Price Range',
+                  style: AppTextStyles.labelMd(isDark),
+                ),
+              ),
               Text(
                 '${_fmt(_price.start)} — ${_fmt(_price.end)}',
                 style: AppTextStyles.bodySm(isDark).copyWith(
-                  color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
+                  color: isDark
+                      ? AppColorsDark.textSecondary
+                      : AppColorsLight.textSecondary,
                 ),
               ),
             ],
@@ -882,10 +1021,14 @@ class _FilterSheetState extends State<_FilterSheet> {
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: AppColors.primary,
-              inactiveTrackColor: isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput,
+              inactiveTrackColor: isDark
+                  ? AppColorsDark.bgInput
+                  : AppColorsLight.bgInput,
               thumbColor: AppColors.primary,
               overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
+              rangeThumbShape: const RoundRangeSliderThumbShape(
+                enabledThumbRadius: 8,
+              ),
               trackHeight: 3,
             ),
             child: RangeSlider(
@@ -908,16 +1051,23 @@ class _FilterSheetState extends State<_FilterSheet> {
               return GestureDetector(
                 onTap: () => setState(() => _brand = selected ? null : b),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.12)
-                        : (isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput),
+                        : (isDark
+                              ? AppColorsDark.bgInput
+                              : AppColorsLight.bgInput),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: selected
                           ? AppColors.primary.withValues(alpha: 0.5)
-                          : (isDark ? AppColorsDark.border : AppColorsLight.border),
+                          : (isDark
+                                ? AppColorsDark.border
+                                : AppColorsLight.border),
                     ),
                   ),
                   child: Text(
@@ -925,7 +1075,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                     style: AppTextStyles.labelSm(isDark).copyWith(
                       color: selected
                           ? AppColors.primary
-                          : (isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary),
+                          : (isDark
+                                ? AppColorsDark.textSecondary
+                                : AppColorsLight.textSecondary),
                       fontSize: 12,
                     ),
                   ),
@@ -942,11 +1094,18 @@ class _FilterSheetState extends State<_FilterSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(
                 'Apply Filters',
-                style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                style: TextStyle(
+                  fontFamily: 'Syne',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -961,7 +1120,11 @@ class _FilterToggleRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _FilterToggleRow({required this.label, required this.value, required this.onChanged});
+  const _FilterToggleRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -985,7 +1148,9 @@ class _FilterToggleRow extends StatelessWidget {
                 width: 1.5,
               ),
             ),
-            child: value ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            child: value
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : null,
           ),
         ],
       ),

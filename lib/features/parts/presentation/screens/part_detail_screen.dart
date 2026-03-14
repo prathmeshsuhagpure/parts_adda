@@ -22,6 +22,7 @@ class PartDetailScreen extends StatefulWidget {
 }
 
 class _PartDetailScreenState extends State<PartDetailScreen> {
+  bool _isWishlisted = false;
   int _imgIndex = 0;
   int _sellerIndex = 0;
 
@@ -35,6 +36,23 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
 
   String _fmt(double v) =>
       '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+
+  void _toggleWishlist() {
+    setState(() {
+      _isWishlisted = !_isWishlisted;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isWishlisted
+              ? 'Added to wishlist'
+              : 'Removed from wishlist',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   /*void _addToCart(PartModel part, bool isDarkMode) {
     final seller = part.sellerListings.isNotEmpty
@@ -117,7 +135,11 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
             ),
           ),
           actions: [
-            _ActionBtn(icon: Icons.favorite_border, onTap: () {}),
+            _ActionBtn(
+              icon: _isWishlisted ? Icons.favorite : Icons.favorite_border,
+              iconColor: _isWishlisted ? Colors.red : Colors.white,
+              onTap: _toggleWishlist,
+            ),
             _ActionBtn(
               icon: Icons.share_outlined,
               onTap: () {},
@@ -441,11 +463,13 @@ class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool rightMargin;
+  final Color iconColor;
 
   const _ActionBtn({
     required this.icon,
     required this.onTap,
     this.rightMargin = false,
+    this.iconColor = Colors.white,
   });
 
   @override

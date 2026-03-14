@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/router/app_routes.dart';
 import '../../features/cart/presentation/providers/cart_provider.dart';
+import 'loading_overlay.dart';
 
 class CustomerMainShell extends StatefulWidget {
   final Widget child;
@@ -18,7 +19,7 @@ class CustomerMainShell extends StatefulWidget {
 }
 
 class _CustomerMainShellState extends State<CustomerMainShell> {
-  DateTime? lastBackPressed;
+  DateTime? _lastBackPress;
 
   int _locToIndex(String loc) {
     if (loc.startsWith('/wishlist')) return 1;
@@ -36,7 +37,11 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
       AppRoutes.orders,
       AppRoutes.settings,
     ];
-    context.go(tabs[i]);
+    LoaderService().show(context);
+    Future.delayed(const Duration(seconds: 1), () {
+      LoaderService().hide();
+      context.go(tabs[i]);
+    });
   }
 
   @override
@@ -48,29 +53,45 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-
-        final now = DateTime.now();
 
         if (current != 0) {
           context.go(AppRoutes.home);
           return;
         }
 
-        if (lastBackPressed == null ||
-            now.difference(lastBackPressed!) > const Duration(seconds: 2)) {
-          lastBackPressed = now;
+        final now = DateTime.now();
+        final isDoubleBack =
+            _lastBackPress != null &&
+            now.difference(_lastBackPress!) < const Duration(seconds: 2);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Press back again to exit'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        } else {
+        if (isDoubleBack) {
           SystemNavigator.pop();
+          return;
         }
+
+        _lastBackPress = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Press back again to exit',
+              style: TextStyle(
+                color: isDarkMode
+                    ? AppColorsDark.textPrimary
+                    : AppColorsLight.textPrimary,
+              ),
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            backgroundColor: isDarkMode
+                ? AppColorsDark.bgCard
+                : AppColorsLight.bgCard,
+          ),
+        );
       },
       child: Scaffold(
         body: widget.child,

@@ -209,21 +209,28 @@ class ProfileProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
+  // AFTER
   Future<void> toggleWishlist(String partId) async {
-    final isInWishlist = _wishlist.any((p) => p['id'] == partId);
     try {
-      if (isInWishlist) {
-        await _repo.removeFromWishlist(partId);
-        _wishlist.removeWhere((p) => p['id'] == partId);
-      } else {
-        final part = await _repo.addToWishlist(partId);
-        _wishlist.add(part);
+      final res = await _repo.toggleWishlist(partId);
+
+      if (res['action'] == 'added') {
+        _wishlist.add({'id': partId, '_id': partId});
+      } else if (res['action'] == 'removed') {
+        _wishlist.removeWhere(
+              (p) => p['id']?.toString() == partId || p['_id']?.toString() == partId,
+        );
       }
+
       notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint(e.toString());
+    }
   }
 
-  bool isWishlisted(String partId) => _wishlist.any((p) => p['id'] == partId);
+  bool isWishlisted(String partId) => _wishlist.any(
+        (p) => p['id']?.toString() == partId || p['_id']?.toString() == partId,
+  );
 
   void clearError() {
     _error = null;

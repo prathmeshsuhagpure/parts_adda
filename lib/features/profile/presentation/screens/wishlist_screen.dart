@@ -53,9 +53,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<ProfileProvider>();
-    final raw = provider.wishlist;
     final isLoading = provider.isLoading;
-    final items = _sorted(raw);
+    final items = _sorted(context.watch<ProfileProvider>().wishlist);
 
     return Scaffold(
       backgroundColor: isDarkMode ? AppColorsDark.bg : AppColorsLight.bg,
@@ -132,37 +131,44 @@ class _WishlistScreenState extends State<WishlistScreen> {
         ],
       ),
 
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: isDarkMode
+            ? AppColorsDark.bgCard
+            : AppColorsLight.bgCard,
+        onRefresh: () => context.read<ProfileProvider>().loadWishlist(),
+        child: isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              )
+            : items.isEmpty
+            ? _EmptyState(isDark: isDarkMode)
+            : _WishlistGrid(
+                items: items,
+                isDark: isDarkMode,
+                fmt: _fmt,
+                onRemove: (id) =>
+                    context.read<ProfileProvider>().toggleWishlist(id),
+                onAddToCart: (item) {
+                  context.read<CartProvider>().addItem(
+                    partId: item['id'] as String,
+                    sellerId: (item['sellerId'] as String?) ?? '',
+                    partName: item['name'] as String,
+                    partSku: (item['sku'] as String?) ?? '',
+                    partImage: item['image'] as String?,
+                    sellerName: (item['sellerName'] as String?) ?? '',
+                    price: (item['price'] as num).toDouble(),
+                    mrp: item['mrp'] != null
+                        ? (item['mrp'] as num).toDouble()
+                        : null,
+                  );
+                  _toast(context, '${item['name']} added to cart', isDarkMode);
+                },
               ),
-            )
-          : items.isEmpty
-          ? _EmptyState(isDark: isDarkMode)
-          : _WishlistGrid(
-              items: items,
-              isDark: isDarkMode,
-              fmt: _fmt,
-              onRemove: (id) =>
-                  context.read<ProfileProvider>().toggleWishlist(id),
-              onAddToCart: (item) {
-                context.read<CartProvider>().addItem(
-                  partId: item['id'] as String,
-                  sellerId: (item['sellerId'] as String?) ?? '',
-                  partName: item['name'] as String,
-                  partSku: (item['sku'] as String?) ?? '',
-                  partImage: item['image'] as String?,
-                  sellerName: (item['sellerName'] as String?) ?? '',
-                  price: (item['price'] as num).toDouble(),
-                  mrp: item['mrp'] != null
-                      ? (item['mrp'] as num).toDouble()
-                      : null,
-                );
-                _toast(context, '${item['name']} added to cart', isDarkMode);
-              },
-            ),
+      ),
     );
   }
 
@@ -299,21 +305,30 @@ class _WishlistGrid extends StatelessWidget {
         childAspectRatio: 0.60,
       ),
       itemCount: items.length,
-      itemBuilder: (_, i) => _WishlistCard(
-        item: Map<String, dynamic>.from(items[i] as Map),
-        isDark: isDark,
-        fmt: fmt,
-        onRemove: () => onRemove(items[i]['id'] as String),
-        onAddToCart: () =>
-            onAddToCart(Map<String, dynamic>.from(items[i] as Map)),
-        onTap: () =>
-            context.push(AppRoutes.partDetailPath(items[i]['id'] as String)),
-      ),
+      itemBuilder: (_, i) {
+        final item = Map<String, dynamic>.from(items[i] as Map);
+        final id = item['id']?.toString();
+        return _WishlistCard(
+          item: Map<String, dynamic>.from(items[i] as Map),
+          isDark: isDark,
+          fmt: fmt,
+          onRemove: () {
+            final id = (item['_id'] ?? item['id'])?.toString();
+            if (id != null) onRemove(id);
+          },
+          onAddToCart: () =>
+              onAddToCart(Map<String, dynamic>.from(items[i] as Map)),
+          onTap: () {
+            final id = item['_id'] ?? item['id'];
+            if (id != null) {
+              context.push(AppRoutes.partDetailPath(id.toString()));
+            }
+          },
+        );
+      },
     );
   }
 }
-
-// ─── Wishlist Card ────────────────────────────────────────────
 
 class _WishlistCard extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -338,6 +353,8 @@ class _WishlistCardState extends State<_WishlistCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _heartCtrl;
   late final Animation<double> _heartAnim;
+  bool _removed = false;
+  bool _isRemoving = false;
 
   @override
   void initState() {
@@ -359,8 +376,21 @@ class _WishlistCardState extends State<_WishlistCard>
   }
 
   void _animateAndRemove() async {
+    if (_isRemoving) return;
+    setState(() => _isRemoving = true);
+
     await _heartCtrl.forward(from: 0);
     widget.onRemove();
+
+    if (mounted) {
+      setState(() => _isRemoving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Removed from wishlist"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -387,217 +417,236 @@ class _WishlistCardState extends State<_WishlistCard>
 
     return GestureDetector(
       onTap: widget.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(color: border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image + heart + badges ──────────────────────
-            Stack(
-              children: [
-                // Image
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 1.1,
-                    child: Container(
-                      color: bgInput,
-                      child: image != null
-                          ? Image.network(image, fit: BoxFit.contain)
-                          : Center(
-                              child: Icon(
-                                Icons.settings_outlined,
-                                size: 40,
-                                color: isDark
-                                    ? AppColorsDark.textMuted
-                                    : AppColorsLight.textMuted,
+      child: _isRemoving
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Container(
+              decoration: BoxDecoration(
+                color: bgCard,
+                borderRadius: AppRadius.cardRadius,
+                border: Border.all(color: border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Image + heart + badges ──────────────────────
+                  Stack(
+                    children: [
+                      // Image
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 1.1,
+                          child: Container(
+                            color: bgInput,
+                            child: image != null
+                                ? Image.network(image, fit: BoxFit.contain)
+                                : Center(
+                                    child: Icon(
+                                      Icons.settings_outlined,
+                                      size: 40,
+                                      color: isDark
+                                          ? AppColorsDark.textMuted
+                                          : AppColorsLight.textMuted,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+
+                      // Discount badge
+                      if (discount > 0)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColorsDark.success,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '-$discount%',
+                              style: const TextStyle(
+                                fontFamily: 'Syne',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10,
+                                color: Colors.white,
                               ),
                             ),
-                    ),
-                  ),
-                ),
+                          ),
+                        ),
 
-                // Discount badge
-                if (discount > 0)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColorsDark.success,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '-$discount%',
-                        style: const TextStyle(
-                          fontFamily: 'Syne',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10,
-                          color: Colors.white,
+                      // OEM badge
+                      if (partType == 'OEM')
+                        Positioned(
+                          top: 8,
+                          right: 36,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColorsDark.info.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: const Text(
+                              'OEM',
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 9,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: GestureDetector(
+                          onTap: _animateAndRemove,
+                          child: ScaleTransition(
+                            scale: _heartAnim,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.38),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _removed
+                                    ? Icons.favorite_border
+                                    : Icons.favorite,
+                                color: _removed
+                                    ? Colors.grey
+                                    : AppColors.primary,
+                                size: 16,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
 
-                // OEM badge
-                if (partType == 'OEM')
-                  Positioned(
-                    top: 8,
-                    right: 36,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColorsDark.info.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: const Text(
-                        'OEM',
-                        style: TextStyle(
-                          fontFamily: 'DMSans',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 9,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Heart / remove button
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: GestureDetector(
-                    onTap: _animateAndRemove,
-                    child: ScaleTransition(
-                      scale: _heartAnim,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.38),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // ── Info ──────────────────────────────────────────
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (brand.isNotEmpty)
-                      Text(
-                        brand.toUpperCase(),
-                        style: AppTextStyles.labelXs(
-                          isDark,
-                        ).copyWith(color: textMuted, letterSpacing: 0.8),
-                      ),
-                    const SizedBox(height: 3),
-                    Text(
-                      name,
-                      style: AppTextStyles.labelMd(isDark),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const Spacer(),
-
-                    // Price row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(widget.fmt(price), style: AppTextStyles.priceSm()),
-                        if (mrp != null && mrp > price) ...[
-                          const SizedBox(width: 4),
+                  // ── Info ──────────────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (brand.isNotEmpty)
+                            Text(
+                              brand.toUpperCase(),
+                              style: AppTextStyles.labelXs(
+                                isDark,
+                              ).copyWith(color: textMuted, letterSpacing: 0.8),
+                            ),
+                          const SizedBox(height: 3),
                           Text(
-                            widget.fmt(mrp),
-                            style: AppTextStyles.strikethrough(
-                              isDark,
-                            ).copyWith(fontSize: 10),
+                            name,
+                            style: AppTextStyles.labelMd(isDark),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Spacer(),
+
+                          // Price row
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                widget.fmt(price),
+                                style: AppTextStyles.priceSm(),
+                              ),
+                              if (mrp != null && mrp > price) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  widget.fmt(mrp),
+                                  style: AppTextStyles.strikethrough(
+                                    isDark,
+                                  ).copyWith(fontSize: 10),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Stock + Add to Cart
+                          Row(
+                            children: [
+                              // Stock badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: inStock
+                                      ? AppColorsDark.success.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : AppColorsLight.error.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  inStock ? 'In Stock' : 'Out of Stock',
+                                  style: AppTextStyles.labelXs(isDark).copyWith(
+                                    color: inStock
+                                        ? AppColorsDark.success
+                                        : AppColorsLight.error,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+
+                              // Add to cart icon
+                              GestureDetector(
+                                onTap: inStock ? widget.onAddToCart : null,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: inStock
+                                        ? AppColors.primary
+                                        : (isDark
+                                              ? AppColorsDark.bgInput
+                                              : AppColorsLight.bgInput),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.add_shopping_cart_outlined,
+                                    size: 15,
+                                    color: inStock ? Colors.white : textMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-
-                    // Stock + Add to Cart
-                    Row(
-                      children: [
-                        // Stock badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: inStock
-                                ? AppColorsDark.success.withValues(alpha: 0.1)
-                                : AppColorsLight.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            inStock ? 'In Stock' : 'Out of Stock',
-                            style: AppTextStyles.labelXs(isDark).copyWith(
-                              color: inStock
-                                  ? AppColorsDark.success
-                                  : AppColorsLight.error,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-
-                        // Add to cart icon
-                        GestureDetector(
-                          onTap: inStock ? widget.onAddToCart : null,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: inStock
-                                  ? AppColors.primary
-                                  : (isDark
-                                        ? AppColorsDark.bgInput
-                                        : AppColorsLight.bgInput),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.add_shopping_cart_outlined,
-                              size: 15,
-                              color: inStock ? Colors.white : textMuted,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -617,79 +666,93 @@ class _EmptyState extends StatelessWidget {
         ? AppColorsDark.textSecondary
         : AppColorsLight.textSecondary;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                color: bgCard,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: border),
-              ),
-              child: Center(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      Icons.favorite_border,
-                      size: 44,
-                      color: isDark
-                          ? AppColorsDark.textMuted
-                          : AppColorsLight.textMuted,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          // fills the viewport so pull registers
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: bgCard,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: border),
                     ),
-                    Positioned(
-                      right: 14,
-                      bottom: 14,
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 12,
-                          color: Colors.white,
-                        ),
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 44,
+                            color: isDark
+                                ? AppColorsDark.textMuted
+                                : AppColorsLight.textMuted,
+                          ),
+                          Positioned(
+                            right: 14,
+                            bottom: 14,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Your wishlist is empty',
+                    style: AppTextStyles.heading(isDark),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap the ♡ on any part to save it here for later.',
+                    style: AppTextStyles.bodyMd(
+                      isDark,
+                    ).copyWith(color: textSec),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  ElevatedButton(
+                    onPressed: () => context.push(AppRoutes.search),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 13,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Browse Parts',
+                      style: AppTextStyles.buttonSm,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Your wishlist is empty',
-              style: AppTextStyles.heading(isDark),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap the ♡ on any part to save it here for later.',
-              style: AppTextStyles.bodyMd(isDark).copyWith(color: textSec),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-            ElevatedButton(
-              onPressed: () => context.push(AppRoutes.search),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 13,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Browse Parts', style: AppTextStyles.buttonSm),
-            ),
-          ],
+          ),
         ),
       ),
     );

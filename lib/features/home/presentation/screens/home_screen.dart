@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../category/presentation/providers/catalog_provider.dart';
 
 class _Banner {
@@ -35,8 +36,6 @@ class _Deal {
     required this.emoji,
   });
 }
-
-// ─── Static data ──────────────────────────────────────────────
 
 const _banners = [
   _Banner(
@@ -157,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _finderOpen = false;
 
   // Recent searches (in-memory demo)
-  final _recent = <String>['Brake pads Swift', 'Bosch wiper', 'Air filter i20'];
+  final _recent = <String>[];
 
   @override
   void initState() {
@@ -174,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     Future.microtask(() {
+      if (!mounted) return;
       context.read<CategoryProvider>().loadCategories();
     });
   }
@@ -323,7 +323,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 // ── Categories ────────────────────────────
                 _SectionHeader(
                   title: 'Shop by Category',
-                  onSeeAll: () => context.push(AppRoutes.allCategories),
+                  onSeeAll: () {
+                    LoaderService().show(context);
+
+                    Future.delayed(const Duration(seconds: 2), () {
+                      LoaderService().hide();
+                      context.push(AppRoutes.allCategories);
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 _CategoryRow(onTap: _doSearch),
@@ -909,7 +916,17 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final categories = context.watch<CategoryProvider>().categories;
+    final provider = context.watch<CategoryProvider>();
+
+    if (provider.isCategoryLoading) {
+      return const SizedBox(
+        height: 94,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final categories = provider.categories;
+
     return SizedBox(
       height: 94,
       child: ListView.separated(
@@ -920,7 +937,8 @@ class _CategoryRow extends StatelessWidget {
         itemBuilder: (_, i) {
           final cat = categories[i];
           return GestureDetector(
-            onTap: () => context.push(AppRoutes.subCategoryPath(cat.id, cat.name)),
+            onTap: () =>
+                context.push(AppRoutes.subCategoryPath(cat.id, cat.name)),
             child: Column(
               children: [
                 Container(

@@ -37,7 +37,7 @@ import 'app_routes.dart';
 
 class AppRouter {
   static final _rootKey = GlobalKey<NavigatorState>();
-  static final _customerShellKey = GlobalKey<NavigatorState>(
+  static final customerShellNavigatorKey = GlobalKey<NavigatorState>(
     debugLabel: 'customerShell',
   );
   static final _dealerShellKey = GlobalKey<NavigatorState>(
@@ -116,7 +116,7 @@ class AppRouter {
 
       // ── Bottom-nav shell
       ShellRoute(
-        navigatorKey: _customerShellKey,
+        navigatorKey: customerShellNavigatorKey,
         builder: (_, _, child) => CustomerMainShell(child: child),
         routes: [
           GoRoute(
