@@ -64,7 +64,8 @@ class ApiEndpoints {
   static const String cartCouponRemove = '/cart/coupon/remove';
 
   // ── Orders
-  static const String orders = '/orders';
+  static const String getOrders = '/orders';
+  static const String placeOrders = '/orders';
   static String orderById(String id) => '/orders/$id';
   static String orderCancel(String id) => '/orders/$id/cancel';
   static String orderInvoice(String id) => '/orders/$id/invoice';

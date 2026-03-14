@@ -10,8 +10,8 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/cart/data/cart_repository.dart';
 import 'features/cart/presentation/providers/cart_provider.dart';
-import 'features/catalog/data/catalog_repository.dart';
-import 'features/catalog/presentation/providers/catalog_provider.dart';
+import 'features/category/data/catalog_repository.dart';
+import 'features/category/presentation/providers/catalog_provider.dart';
 import 'features/dealer/presentation/providers/dealer_order_provider.dart';
 import 'features/search/data/search_repository.dart';
 import 'features/search/presentation/providers/search_provider.dart';
@@ -82,7 +82,7 @@ class _PartsAddaAppState extends State<PartsAddaApp> {
 
         // ── Per-feature providers (recreated lazily)
         ChangeNotifierProvider(
-          create: (_) => CatalogProvider(repo: _catalogRepo),
+          create: (_) => CategoryProvider(repo: _catalogRepo),
         ),
         ChangeNotifierProvider(
           create: (_) => SearchProvider(repo: _searchRepo),

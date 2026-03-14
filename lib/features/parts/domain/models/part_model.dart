@@ -1,4 +1,4 @@
-import '../../../catalog/domain/models/category_model.dart';
+import '../../../category/domain/models/category_model.dart';
 
 class PartModel {
   final String id;

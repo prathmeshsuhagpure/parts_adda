@@ -6,7 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../catalog/presentation/providers/catalog_provider.dart';
+import '../../../category/presentation/providers/catalog_provider.dart';
 
 class _Banner {
   final String title, subtitle, cta, color1, color2, emoji;
@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     Future.microtask(() {
-      context.read<CatalogProvider>().loadCategories();
+      context.read<CategoryProvider>().loadCategories();
     });
   }
 
@@ -909,7 +909,7 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final categories = context.watch<CatalogProvider>().categories;
+    final categories = context.watch<CategoryProvider>().categories;
     return SizedBox(
       height: 94,
       child: ListView.separated(

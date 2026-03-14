@@ -75,6 +75,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
           }
           final order = orders.selectedOrder;
           final tracking = orders.tracking;
+          print("Order: $order");
+          print("Tracking: $tracking");
           if (order == null || tracking == null) {
             return const Center(child: Text('No tracking data'));
           }

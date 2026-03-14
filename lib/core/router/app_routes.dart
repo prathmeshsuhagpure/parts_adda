@@ -48,10 +48,13 @@ class AppRoutes {
   static const String notifications = '/profile/notifications';
   static const String editProfile = '/profile/edit';
 
-
   // Product
   static const String addProduct = '/dealer/inventory/add';
 
+  // Vehicles
+  /*static const String garage = '/garage';
+  static const String numberPlate = '/number-plate';
+  static const String searchModified = '/search-modified';*/
 
   // Helpers
   static String categoryPath(String id, String name) =>

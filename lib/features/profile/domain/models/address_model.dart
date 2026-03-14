@@ -35,4 +35,17 @@ class AddressModel {
     pincode: j['pincode'],
     isDefault: j['isDefault'] ?? false,
   );
+
+  Map<String, dynamic> toJson() => {
+    '_id': id,
+    'label': label,
+    'fullName': fullName,
+    'phone': phone,
+    'line1': line1,
+    'line2': line2,
+    'city': city,
+    'state': state,
+    'pincode': pincode,
+    'isDefault': isDefault,
+  };
 }

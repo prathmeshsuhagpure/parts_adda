@@ -82,7 +82,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
     super.dispose();
   }
 
-  void _reload() => context.read<CatalogProvider>().loadCategory(
+  void _reload() => context.read<CategoryProvider>().loadCategory(
     categoryId: widget.categoryId,
     filters: _filters,
   );
@@ -90,7 +90,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
         _scrollCtrl.position.maxScrollExtent - 200) {
-      context.read<CatalogProvider>().loadMore(
+      context.read<CategoryProvider>().loadMore(
         categoryId: widget.categoryId,
         filters: _filters,
       );
@@ -156,7 +156,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<CatalogProvider>();
+    final provider = context.watch<CategoryProvider>();
     final parts = provider.parts;
     final isLoading = provider.isListLoading;
     final isLoadingMore = provider.isLoadingMore;
@@ -190,6 +190,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ],
         ),
         actions: [
+          GestureDetector(
+            onTap: () => context.push(AppRoutes.search),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                Icons.search,
+                color: isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary,
+                size: 20,
+              ),
+            ),
+          ),
           GestureDetector(
             onTap: () => setState(() => _isGridView = !_isGridView),
             child: Padding(

@@ -6,29 +6,23 @@ import '../../../../core/router/app_routes.dart';
 import '../../data/catalog_repository.dart';
 import '../../domain/models/category_model.dart';
 
-// Accent & icon palette for visual variety
-const _kAccents = [
-  Color(0xFFE8290B), Color(0xFFEF4444), Color(0xFF22C55E), Color(0xFFFFB800),
-  Color(0xFF8B5CF6), Color(0xFF06B6D4), Color(0xFF3B82F6), Color(0xFFF97316),
-  Color(0xFFEC4899), Color(0xFF64748B),
-];
-
 const _kIcons = [
-  Icons.settings_rounded,       Icons.electrical_services_rounded,
-  Icons.tire_repair_rounded,    Icons.oil_barrel_rounded,
-  Icons.car_repair_rounded,     Icons.build_rounded,
-  Icons.battery_charging_full_rounded, Icons.speed_rounded,
-  Icons.air_rounded,            Icons.thermostat_rounded,
+  Icons.settings_rounded,
+  Icons.electrical_services_rounded,
+  Icons.tire_repair_rounded,
+  Icons.oil_barrel_rounded,
+  Icons.car_repair_rounded,
+  Icons.build_rounded,
+  Icons.battery_charging_full_rounded,
+  Icons.speed_rounded,
+  Icons.air_rounded,
+  Icons.thermostat_rounded,
 ];
 
-// ═════════════════════════════════════════════════════════════
-// SubCategoryScreen
-//
 // Flow: root category → this screen shows its subcategories.
 // Tapping a subcategory → pushes ANOTHER SubCategoryScreen for
 // that child. When there are no further subcategories the user
 // lands on CategoryScreen (parts list).
-// ═════════════════════════════════════════════════════════════
 
 class SubCategoryScreen extends StatefulWidget {
   final String categoryId;
@@ -58,13 +52,34 @@ class _SubCategoryScreenState extends State<SubCategoryScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
       final repo = context.read<CatalogRepository>();
       final data = await repo.getSubCategories(widget.categoryId);
-      if (mounted) setState(() { _subs = data; _isLoading = false; });
+      if (!mounted) return;
+      if (data.isEmpty) {
+        // Leaf category — skip the empty state and go straight to the parts list.
+        // Use pushReplacement so the back button returns to the parent sub-category,
+        // not this transparent loading screen.
+        context.pushReplacement(
+          AppRoutes.categoryPath(widget.categoryId, widget.categoryName),
+        );
+      } else {
+        setState(() {
+          _subs = data;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() { _error = 'Failed to load. Tap to retry.'; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load. Tap to retry.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -78,7 +93,9 @@ class _SubCategoryScreenState extends State<SubCategoryScreen> {
   }
 
   void _browseAllParts() {
-    context.push(AppRoutes.categoryPath(widget.categoryId, widget.categoryName));
+    context.push(
+      AppRoutes.categoryPath(widget.categoryId, widget.categoryName),
+    );
   }
 
   @override
@@ -141,136 +158,142 @@ class _SubCategoryScreenState extends State<SubCategoryScreen> {
 
       body: _isLoading
           ? Center(
-        child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
-      )
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2.5,
+              ),
+            )
           : _error != null
           ? _ErrorState(message: _error!, onRetry: _load)
-      // No subcategories → jump straight to parts list
+          // No subcategories → jump straight to parts list
           : _subs.isEmpty
           ? _NoSubsState(
-        categoryName: widget.categoryName,
-        onBrowse: _browseAllParts,
-      )
+              categoryName: widget.categoryName,
+              onBrowse: _browseAllParts,
+            )
           : CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // ── Sub-category grid ──────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.88,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                    (_, i) {
-                  final sub = _subs[i];
-                  final accent = _kAccents[i % _kAccents.length];
-                  final icon = _kIcons[i % _kIcons.length];
-                  return _SubTile(
-                    name: sub.name,
-                    icon: icon,
-                    accent: accent,
-                    isDark: isDark,
-                    bgCard: bgCard,
-                    border: border,
-                    textPri: textPri,
-                    onTap: () => _onSubTap(sub),
-                  );
-                },
-                childCount: _subs.length,
-              ),
-            ),
-          ),
-
-          // ── "Browse all parts" CTA ────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-            sliver: SliverToBoxAdapter(
-              child: GestureDetector(
-                onTap: _browseAllParts,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 18, horizontal: 20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFE8290B), Color(0xFFC01F00)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFE8290B).withValues(alpha: 0.3),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // ── Sub-category grid ──────────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.88,
+                        ),
+                    delegate: SliverChildBuilderDelegate((_, i) {
+                      final sub = _subs[i];
+                      final icon = _kIcons[i % _kIcons.length];
+                      return _SubTile(
+                        name: sub.name,
+                        icon: icon,
+                        accent: AppColors.primary,
+                        isDark: isDark,
+                        bgCard: bgCard,
+                        border: border,
+                        textPri: textPri,
+                        onTap: () => _onSubTap(sub),
+                      );
+                    }, childCount: _subs.length),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
+                ),
+
+                // ── "Browse all parts" CTA ────────────────────
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                  sliver: SliverToBoxAdapter(
+                    child: GestureDetector(
+                      onTap: _browseAllParts,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 18,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFE8290B), Color(0xFFC01F00)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFFE8290B,
+                              ).withValues(alpha: 0.3),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                        child: const Icon(
-                          Icons.grid_view_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            const Text(
-                              'Browse All Parts',
-                              style: TextStyle(
-                                fontFamily: 'Syne',
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.grid_view_rounded,
+                                size: 18,
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'All ${widget.categoryName} parts in one place',
-                              style: TextStyle(
-                                fontFamily: 'DMSans',
-                                fontSize: 11,
-                                color: Colors.white.withValues(alpha: 0.75),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Browse All Parts',
+                                    style: TextStyle(
+                                      fontFamily: 'Syne',
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'All ${widget.categoryName} parts in one place',
+                                    style: TextStyle(
+                                      fontFamily: 'DMSans',
+                                      fontSize: 11,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.75,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 16,
+                                color: Colors.white,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -365,7 +388,11 @@ class _NoSubsState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.primary),
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 48,
+              color: AppColors.primary,
+            ),
             const SizedBox(height: 16),
             Text(
               categoryName,
@@ -380,7 +407,11 @@ class _NoSubsState extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(
               'No further sub-categories.\nBrowse all available parts below.',
-              style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 13,
+                color: Colors.grey,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -389,13 +420,22 @@ class _NoSubsState extends StatelessWidget {
               icon: const Icon(Icons.grid_view_rounded, size: 16),
               label: const Text(
                 'Browse All Parts',
-                style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(
+                  fontFamily: 'Syne',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -425,7 +465,11 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message,
-              style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, color: Colors.grey),
+              style: const TextStyle(
+                fontFamily: 'DMSans',
+                fontSize: 14,
+                color: Colors.grey,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -434,9 +478,17 @@ class _ErrorState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: const Text('Retry', style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Retry',
+                style: TextStyle(
+                  fontFamily: 'Syne',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ),

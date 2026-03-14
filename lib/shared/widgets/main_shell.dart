@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:badges/badges.dart' as badges;
@@ -7,10 +8,17 @@ import '../../core/constants/app_text_styles.dart';
 import '../../core/router/app_routes.dart';
 import '../../features/cart/presentation/providers/cart_provider.dart';
 
-class CustomerMainShell extends StatelessWidget {
+class CustomerMainShell extends StatefulWidget {
   final Widget child;
 
   const CustomerMainShell({super.key, required this.child});
+
+  @override
+  State<CustomerMainShell> createState() => _CustomerMainShellState();
+}
+
+class _CustomerMainShellState extends State<CustomerMainShell> {
+  DateTime? lastBackPressed;
 
   int _locToIndex(String loc) {
     if (loc.startsWith('/wishlist')) return 1;
@@ -38,60 +46,89 @@ class CustomerMainShell extends StatelessWidget {
     final cartCount = context.select<CartProvider, int>((c) => c.itemCount);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? AppColorsDark.bgCard2 : AppColorsLight.bgCard2,
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final now = DateTime.now();
+
+        if (current != 0) {
+          context.go(AppRoutes.home);
+          return;
+        }
+
+        if (lastBackPressed == null ||
+            now.difference(lastBackPressed!) > const Duration(seconds: 2)) {
+          lastBackPressed = now;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: widget.child,
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? AppColorsDark.bgCard2 : AppColorsLight.bgCard2,
+            border: Border(
+              top: BorderSide(
+                color: isDarkMode
+                    ? AppColorsDark.border
+                    : AppColorsLight.border,
+              ),
             ),
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
-                  label: 'Home',
-                  isActive: current == 0,
-                  onTap: () => _onTap(context, 0),
-                ),
-                _NavItem(
-                  icon: Icons.favorite_outlined,
-                  activeIcon: Icons.favorite,
-                  label: 'Wishlist',
-                  isActive: current == 1,
-                  onTap: () => _onTap(context, 1),
-                ),
-                _NavItem(
-                  icon: Icons.shopping_cart_outlined,
-                  activeIcon: Icons.shopping_cart,
-                  label: 'Cart',
-                  isActive: current == 2,
-                  onTap: () => _onTap(context, 2),
-                  badge: cartCount > 0 ? '$cartCount' : null,
-                ),
-                _NavItem(
-                  icon: Icons.receipt_long_outlined,
-                  activeIcon: Icons.receipt_long,
-                  label: 'Orders',
-                  isActive: current == 3,
-                  onTap: () => _onTap(context, 3),
-                ),
-                _NavItem(
-                  icon: Icons.settings_outlined,
-                  activeIcon: Icons.settings,
-                  label: 'Settings',
-                  isActive: current == 4,
-                  onTap: () => _onTap(context, 4),
-                ),
-              ],
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home,
+                    label: 'Home',
+                    isActive: current == 0,
+                    onTap: () => _onTap(context, 0),
+                  ),
+                  _NavItem(
+                    icon: Icons.favorite_outlined,
+                    activeIcon: Icons.favorite,
+                    label: 'Wishlist',
+                    isActive: current == 1,
+                    onTap: () => _onTap(context, 1),
+                  ),
+                  _NavItem(
+                    icon: Icons.shopping_cart_outlined,
+                    activeIcon: Icons.shopping_cart,
+                    label: 'Cart',
+                    isActive: current == 2,
+                    onTap: () => _onTap(context, 2),
+                    badge: cartCount > 0 ? '$cartCount' : null,
+                  ),
+                  _NavItem(
+                    icon: Icons.receipt_long_outlined,
+                    activeIcon: Icons.receipt_long,
+                    label: 'Orders',
+                    isActive: current == 3,
+                    onTap: () => _onTap(context, 3),
+                  ),
+                  _NavItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings,
+                    label: 'Settings',
+                    isActive: current == 4,
+                    onTap: () => _onTap(context, 4),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

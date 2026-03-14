@@ -29,17 +29,27 @@ class OrderProvider extends ChangeNotifier {
 
   // ── Getters
   OrderStatus get listStatus => _listStatus;
+
   List<OrderModel> get orders => _orders;
+
   OrderStatus get detailStatus => _detailStatus;
+
   OrderModel? get selectedOrder => _selectedOrder;
+
   OrderStatus get trackingStatus => _trackingStatus;
+
   OrderTracking? get tracking => _tracking;
+
   bool get isPlacingOrder => _isPlacingOrder;
+
   String? get placedOrderId => _placedOrderId;
+
   String? get error => _error;
 
   bool get isListLoading => _listStatus == OrderStatus.loading;
+
   bool get isDetailLoading => _detailStatus == OrderStatus.loading;
+
   bool get isTrackingLoading => _trackingStatus == OrderStatus.loading;
 
   // ─────────────────────────────────────────────────────────
@@ -102,9 +112,16 @@ class OrderProvider extends ChangeNotifier {
   // Place order from cart
   // ─────────────────────────────────────────────────────────
   Future<bool> placeOrder({
-    required String addressId,
-    required String paymentMethod,
-    String? paymentGatewayId,
+    required List<Map<String, dynamic>> items,
+    required Map<String, dynamic> shippingAddress,
+    required double subtotal,
+    required double discount,
+    required double deliveryCharge,
+    required double gst,
+    required double total,
+    String paymentMethod = "online",
+    String? couponCode,
+    bool isB2B = false,
   }) async {
     _isPlacingOrder = true;
     _placedOrderId = null;
@@ -113,15 +130,23 @@ class OrderProvider extends ChangeNotifier {
 
     try {
       final order = await _repo.placeOrder(
-        addressId: addressId,
+        items: items,
+        shippingAddress: shippingAddress,
         paymentMethod: paymentMethod,
-        paymentGatewayId: paymentGatewayId,
+        couponCode: couponCode,
+        subtotal: subtotal,
+        discount: discount,
+        deliveryCharge: deliveryCharge,
+        gst: gst,
+        total: total,
+        isB2B: isB2B,
       );
       _placedOrderId = order.id;
-      _isPlacingOrder = false;
-      // Prepend to list
       _orders.insert(0, order);
+
+      _isPlacingOrder = false;
       notifyListeners();
+
       return true;
     } catch (e) {
       _isPlacingOrder = false;

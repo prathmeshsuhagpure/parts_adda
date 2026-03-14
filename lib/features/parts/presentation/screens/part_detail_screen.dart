@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../catalog/presentation/providers/catalog_provider.dart';
+import '../../../category/presentation/providers/catalog_provider.dart';
+import '../../../category/presentation/screens/widgets/compatibility_chips.dart';
+import '../../../category/presentation/screens/widgets/review_widget.dart';
+import '../../../category/presentation/screens/widgets/seller_listing_card.dart';
 import '../../domain/models/part_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../shared/widgets/main_shell.dart';
-import '../../../catalog/presentation/screens/widgets/compatibility_chips.dart';
-import '../../../catalog/presentation/screens/widgets/seller_listing_card.dart';
-import '../../../catalog/presentation/screens/widgets/review_widget.dart';
 
 class PartDetailScreen extends StatefulWidget {
   final String partId;
@@ -29,7 +29,7 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CatalogProvider>().loadPartDetail(widget.partId);
+      context.read<CategoryProvider>().loadPartDetail(widget.partId);
     });
   }
 
@@ -69,7 +69,7 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: isDarkMode ? AppColorsDark.bg : AppColorsLight.bg,
-      body: Consumer<CatalogProvider>(
+      body: Consumer<CategoryProvider>(
         builder: (context, catalog, _) {
           if (catalog.isDetailLoading) {
             return const Center(child: AppLoadingIndicator());

@@ -5,10 +5,10 @@ import '../../domain/models/category_model.dart';
 
 enum CatalogStatus { initial, loading, loaded, error }
 
-class CatalogProvider extends ChangeNotifier {
+class CategoryProvider extends ChangeNotifier {
   final CatalogRepository _repo;
 
-  CatalogProvider({required CatalogRepository repo}) : _repo = repo;
+  CategoryProvider({required CatalogRepository repo}) : _repo = repo;
 
   // ── Part Detail
   CatalogStatus _detailStatus = CatalogStatus.initial;
