@@ -71,8 +71,10 @@ class UserRepository {
     }
   }
 
-  Future<AddressModel> updateAddress(String id,
-      Map<String, dynamic> data,) async {
+  Future<AddressModel> updateAddress(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final res = await dio.put(ApiEndpoints.updateAddress(id), data: data);
 
@@ -102,18 +104,53 @@ class UserRepository {
     }
   }
 
-  Future<List<VehicleModel>> getVehicles() async {
-    final res = await dio.get(ApiEndpoints.getVehicles);
+  Future<List<BrandModel>> getVehicleBrands() async {
+    final res = await dio.get(ApiEndpoints.vehicleBrands);
 
-    return (res.data['data']['vehicles'] as List)
+    return (res.data['data'] as List)
+        .map((e) => BrandModel.fromJson(e))
+        .toList();
+  }
+
+  /// GET MODELS BY BRAND
+  Future<List<VehicleModel>> getVehicleModels(String brandId) async {
+    final res = await dio.get(ApiEndpoints.vehicleModels(brandId));
+
+    print("response: $res");
+    return (res.data['data'] as List)
         .map((e) => VehicleModel.fromJson(e))
         .toList();
   }
 
-  Future<VehicleModel> addVehicle(Map<String, dynamic> data) async {
+  /// GET GENERATIONS BY MODEL
+  Future<List<GenerationModel>> getVehicleGenerations(String modelId) async {
+    final res = await dio.get(ApiEndpoints.vehicleGenerations(modelId));
+
+    return (res.data['data'] as List)
+        .map((e) => GenerationModel.fromJson(e))
+        .toList();
+  }
+
+  /// GET VARIANTS
+  Future<List<VariantModel>> getVehicleVariants(String generationId) async {
+    final res = await dio.get(ApiEndpoints.vehicleVariants(generationId));
+
+    return (res.data['data'] as List)
+        .map((e) => VariantModel.fromJson(e))
+        .toList();
+  }
+
+  Future<List<UserVehicleModel>> getUserVehicles() async {
+    final res = await dio.get(ApiEndpoints.getVehicles);
+    return (res.data['data']['vehicles'] as List)
+        .map((e) => UserVehicleModel.fromJson(e))
+        .toList();
+  }
+
+  Future<UserVehicleModel> addVehicle(Map<String, dynamic> data) async {
     final res = await dio.post(ApiEndpoints.addVehicle, data: data);
 
-    return VehicleModel.fromJson(res.data['data']['vehicle']);
+    return UserVehicleModel.fromJson(res.data['data']['vehicle']);
   }
 
   Future<void> removeVehicle(String id) async {

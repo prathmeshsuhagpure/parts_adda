@@ -45,15 +45,14 @@ class ApiEndpoints {
   static const String searchSuggestions = '/search/suggestions';
 
   // ── Vehicles
-  static const String vehicleMakes = '/vehicles/makes';
-  static String vehicleModels(String make) => '/vehicles/$make/models';
-  static String vehicleYears(String make, String model) =>
-      '/vehicles/$make/$model/years';
-  static String vehicleVariants(String make, String model, String year) =>
-      '/vehicles/$make/$model/$year/variants';
-  static const String addVehicle = '/users/vehicles';
-  static const String getVehicles = '/users/vehicles';
-  static String removeVehicle(String id) => '/users/vehicles/$id';
+  static const String vehicleBrands = '/vehicles/brands';
+  static String vehicleModels(String brandId) => '/vehicles/models/$brandId';
+  static String vehicleGenerations(String modelId) => '/vehicles/generations/$modelId';
+  static String vehicleVariants(String generationId) => '/vehicles/variants/$generationId';
+  static String variantById(String variantId) => '/vehicles/variant/$variantId';
+  static const String addVehicle = '/vehicles/garage/addVehicle';
+  static const String getVehicles = '/vehicles/garage/getVehicles';
+  static String removeVehicle(String id) => '/vehicles/garage/removeVehicle/$id';
 
   // ── Cart
   static const String cart = '/cart';

@@ -1,3 +1,4 @@
+/*
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -59,4 +60,4 @@ class LoaderService {
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
-}
+}*/

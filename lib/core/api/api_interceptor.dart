@@ -17,7 +17,7 @@ class AuthInterceptor extends Interceptor {
     ApiEndpoints.allCategories,
     ApiEndpoints.brands,
     ApiEndpoints.search,
-    ApiEndpoints.vehicleMakes,
+    ApiEndpoints.vehicleBrands,
   ];
 
   @override

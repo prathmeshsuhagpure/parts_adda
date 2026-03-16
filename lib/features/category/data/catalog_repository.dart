@@ -31,19 +31,14 @@ class CatalogRepository {
     try {
       final response = await dio.get(
         ApiEndpoints.partsByCategory(categoryId),
-        queryParameters: {
-          "page": page,
-          ...?filters,
-        },
+        queryParameters: {"page": page, ...?filters},
       );
 
       final data = response.data["data"];
 
       final List partsJson = data["parts"];
 
-      final items = partsJson
-          .map((e) => PartModel.fromJson(e))
-          .toList();
+      final items = partsJson.map((e) => PartModel.fromJson(e)).toList();
 
       return PaginatedResult<PartModel>(
         items: items,
@@ -74,20 +69,14 @@ class CatalogRepository {
     try {
       final response = await dio.get(ApiEndpoints.subCategories(parentId));
       if (response.statusCode == 200 && response.data["success"] == true) {
+        final List list = response.data["data"];
 
-        final List list =
-        response.data["data"];
-
-        return list
-            .map((e) => CategoryModel.fromJson(e))
-            .toList();
+        return list.map((e) => CategoryModel.fromJson(e)).toList();
       }
 
       throw Exception("Failed to load sub categories");
-
     } catch (e) {
       throw Exception("Failed to load sub categories: $e");
     }
   }
-
 }

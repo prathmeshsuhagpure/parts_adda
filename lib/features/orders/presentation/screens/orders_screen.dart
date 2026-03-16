@@ -63,10 +63,6 @@ String _statusLabel(String s) {
 bool _isActive(String s) =>
     ['placed', 'confirmed', 'processing', 'shipped'].contains(s.toLowerCase());
 
-// ═══════════════════════════════════════════════════════════════
-// OrdersScreen
-// ═══════════════════════════════════════════════════════════════
-
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -119,7 +115,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     await context.read<OrderProvider>().loadOrders(statusFilter: filter);
   }
 
-  // ── Build ──────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<OrderProvider>();
@@ -133,7 +128,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  // ── Sliver header ──────────────────────────────────────────
   Widget _buildSliverHeader(OrderProvider prov) {
     final activeCount = prov.orders.where((o) => _isActive(o.status)).length;
 
@@ -493,10 +487,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Order Card
-// ═══════════════════════════════════════════════════════════════
 
 class _OrderCard extends StatelessWidget {
   final OrderModel order;
@@ -884,7 +874,7 @@ class _ItemThumb extends StatelessWidget {
             ? Image.network(
                 image,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, ___) => Icon(
+                errorBuilder: (_, _, _) => Icon(
                   Icons.settings_outlined,
                   size: size * 0.45,
                   color: txtMut,
@@ -1120,8 +1110,6 @@ class _Bone extends StatelessWidget {
   );
 
   double math_sin(double x) {
-    // Simple sin approximation for shimmer
-    // x is 0..π, result is 0..1
     final nx = x / 3.14159;
     return 4 * nx * (1 - nx);
   }

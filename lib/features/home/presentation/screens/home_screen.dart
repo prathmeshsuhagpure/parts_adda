@@ -324,12 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _SectionHeader(
                   title: 'Shop by Category',
                   onSeeAll: () {
-                    LoaderService().show(context);
-
-                    Future.delayed(const Duration(seconds: 2), () {
-                      LoaderService().hide();
-                      context.push(AppRoutes.allCategories);
-                    });
+                    context.push(AppRoutes.allCategories);
                   },
                 ),
                 const SizedBox(height: 12),

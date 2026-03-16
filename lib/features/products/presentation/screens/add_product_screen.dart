@@ -5,30 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
+import '../../../category/domain/models/category_model.dart';
+import '../../../category/presentation/providers/catalog_provider.dart';
 import '../../../dealer/domain/models/inventory_model.dart';
 import '../../../dealer/presentation/providers/inventory_provider.dart';
 
-
 // ─── Static reference data ────────────────────────────────────
-
-const _kCategories = [
-  'Engine',
-  'Brakes',
-  'Filters',
-  'Electrical',
-  'Suspension',
-  'Transmission',
-  'Body Parts',
-  'Wipers',
-  'Batteries',
-  'Tyres',
-  'Exhaust',
-  'Cooling',
-  'Fuel System',
-  'Steering',
-  'Lighting',
-  'Other',
-];
+// NOTE: _kCategories removed — now dynamic from API via CategoryProvider
 
 const _kBrands = [
   'Bosch',
@@ -92,23 +75,11 @@ const _kModelsByMake = <String, List<String>>{
   'Jeep': ['Compass', 'Meridian', 'Wrangler'],
 };
 
-const _kSpecTemplates = <String, List<String>>{
-  'Engine': ['Material', 'Weight', 'Compatibility', 'Warranty'],
-  'Brakes': ['Pad Material', 'Axle', 'Thickness', 'Warranty'],
-  'Filters': ['Filter Type', 'Media', 'Height (mm)', 'OD (mm)'],
-  'Electrical': ['Voltage', 'Wattage', 'Connector Type', 'IP Rating'],
-  'Suspension': ['Type', 'Position', 'Travel (mm)', 'Warranty'],
-  'Batteries': ['Capacity (Ah)', 'CCA', 'Voltage', 'Terminal'],
-  'Tyres': ['Width', 'Aspect Ratio', 'Rim Size', 'Load Index'],
-  'Lighting': ['Bulb Type', 'Lumens', 'Kelvin', 'Voltage'],
-};
-
 // ═════════════════════════════════════════════════════════════
 // AddProductScreen
 // ═════════════════════════════════════════════════════════════
 
 class AddProductScreen extends StatefulWidget {
-  /// Pass an existing item to enter edit mode.
   final InventoryItem? existing;
 
   const AddProductScreen({super.key, this.existing});
@@ -132,12 +103,12 @@ class _AddProductScreenState extends State<AddProductScreen>
   final _nameCtrl = TextEditingController();
   final _skuCtrl = TextEditingController();
   final _oemCtrl = TextEditingController();
-  String _category = _kCategories[0];
+
+  // category is now managed entirely through CategoryProvider
   String _brand = _kBrands[0];
   String _partType = 'aftermarket';
 
   // ── Step 1: Images ────────────────────────────────────────
-  // Simulated image slots (replace with image_picker in production)
   final List<String?> _imageSlots = [null, null, null, null, null];
   int _primaryImageIdx = 0;
 
@@ -151,8 +122,6 @@ class _AddProductScreenState extends State<AddProductScreen>
 
   // ── Step 3: Details ───────────────────────────────────────
   final _descCtrl = TextEditingController();
-
-  // Specifications (key-value pairs)
   List<_SpecEntry> _specs = [];
 
   // Vehicle compatibility
@@ -178,6 +147,9 @@ class _AddProductScreenState extends State<AddProductScreen>
     super.initState();
     _pageCtrl = PageController();
     _initFromExisting();
+    Future.microtask(() {
+      context.read<CategoryProvider>().loadCategories();
+    });
   }
 
   void _initFromExisting() {
@@ -186,7 +158,6 @@ class _AddProductScreenState extends State<AddProductScreen>
     _nameCtrl.text = e.name;
     _skuCtrl.text = e.sku;
     _oemCtrl.text = e.oemNumber ?? '';
-    _category = e.category.isNotEmpty ? e.category : _kCategories[0];
     _brand = e.brand.isNotEmpty ? e.brand : _kBrands[0];
     _partType = e.partType ?? 'aftermarket';
     _priceCtrl.text = e.price.toStringAsFixed(0);
@@ -202,8 +173,14 @@ class _AddProductScreenState extends State<AddProductScreen>
           ),
         )
         .toList();
-    // Load spec template for existing category
-    _loadSpecTemplate(e.category);
+    // Pre-select the existing category after categories load.
+    // If the API returns the category id we can call selectCategory() in a
+    // post-frame callback once loadCategories() completes.
+    if (e.category.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<CategoryProvider>().selectCategory(e.category);
+      });
+    }
   }
 
   @override
@@ -229,23 +206,25 @@ class _AddProductScreenState extends State<AddProductScreen>
     super.dispose();
   }
 
-  void _loadSpecTemplate(String category) {
-    final tpl = _kSpecTemplates[category];
-    if (tpl == null || _specs.isNotEmpty) return;
-    setState(() {
-      _specs = tpl
-          .map(
-            (k) => _SpecEntry(
-              TextEditingController(text: k),
-              TextEditingController(),
-            ),
-          )
-          .toList();
-    });
-  }
-
   // ── Navigation ────────────────────────────────────────────
   void _next() {
+    // Extra validation on step 0: a category must be selected
+    if (_currentStep == 0) {
+      final leafId = context.read<CategoryProvider>().leafCategoryId;
+      if (leafId == null || leafId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please select a category'),
+            backgroundColor: AppColorsDark.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        return;
+      }
+    }
     if (!_keys[_currentStep].currentState!.validate()) return;
     if (_currentStep < _totalSteps - 1) {
       setState(() => _currentStep++);
@@ -289,7 +268,7 @@ class _AddProductScreenState extends State<AddProductScreen>
       'name': _nameCtrl.text.trim(),
       'sku': _skuCtrl.text.trim(),
       'brand': _brand,
-      'category': _category,
+      'category': context.read<CategoryProvider>().leafCategoryId ?? '',
       'oemNumber': _oemCtrl.text.trim().isNotEmpty
           ? _oemCtrl.text.trim()
           : null,
@@ -366,7 +345,6 @@ class _AddProductScreenState extends State<AddProductScreen>
           style: AppTextStyles.headingSm(_isDark),
         ),
         actions: [
-          // Step counter
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
@@ -391,10 +369,8 @@ class _AddProductScreenState extends State<AddProductScreen>
 
       body: Column(
         children: [
-          // ── Step label ──────────────────────────────────────
           _StepHeader(step: _currentStep, isDark: _isDark),
 
-          // ── Page content ────────────────────────────────────
           Expanded(
             child: PageView(
               controller: _pageCtrl,
@@ -405,17 +381,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                   nameCtrl: _nameCtrl,
                   skuCtrl: _skuCtrl,
                   oemCtrl: _oemCtrl,
-                  category: _category,
                   brand: _brand,
                   partType: _partType,
                   isDark: _isDark,
                   scrollCtrl: _scrollCtrl,
-                  onCategoryChanged: (v) {
-                    setState(() {
-                      _category = v;
-                      _loadSpecTemplate(v);
-                    });
-                  },
                   onBrandChanged: (v) => setState(() => _brand = v),
                   onPartTypeChanged: (v) => setState(() => _partType = v),
                 ),
@@ -509,7 +478,6 @@ class _AddProductScreenState extends State<AddProductScreen>
             ),
           ),
 
-          // ── Bottom nav ───────────────────────────────────────
           _BottomNav(
             step: _currentStep,
             total: _totalSteps,
@@ -661,7 +629,6 @@ class _BottomNav extends StatelessWidget {
       child: SafeArea(
         child: Row(
           children: [
-            // Back / Cancel
             Expanded(
               child: OutlinedButton(
                 onPressed: onBack,
@@ -683,7 +650,6 @@ class _BottomNav extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Next / Submit
             Expanded(
               flex: 2,
               child: ElevatedButton(
@@ -739,30 +705,28 @@ class _BottomNav extends StatelessWidget {
 class _Step0BasicInfo extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameCtrl, skuCtrl, oemCtrl;
-  final String category, brand, partType;
+  final String brand, partType;
   final bool isDark;
   final ScrollController scrollCtrl;
-  final ValueChanged<String> onCategoryChanged,
-      onBrandChanged,
-      onPartTypeChanged;
+  final ValueChanged<String> onBrandChanged, onPartTypeChanged;
 
   const _Step0BasicInfo({
     required this.formKey,
     required this.nameCtrl,
     required this.skuCtrl,
     required this.oemCtrl,
-    required this.category,
     required this.brand,
     required this.partType,
     required this.isDark,
     required this.scrollCtrl,
-    required this.onCategoryChanged,
     required this.onBrandChanged,
     required this.onPartTypeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cp = context.watch<CategoryProvider>();
+
     return Form(
       key: formKey,
       child: ListView(
@@ -817,15 +781,31 @@ class _Step0BasicInfo extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Category
+          // ── Dynamic Category Cascade ──────────────────────────
           _FieldLabel('Category *'),
-          _DropdownTile<String>(
-            value: category,
-            items: _kCategories,
-            isDark: isDark,
-            labelOf: (s) => s,
-            onChanged: (v) => onCategoryChanged(v!),
-          ),
+          if (cp.isCategoryLoading)
+            Container(
+              height: 50,
+              decoration: BoxDecoration(
+                color: isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? AppColorsDark.border : AppColorsLight.border,
+                ),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            )
+          else
+            _CategoryCascade(isDark: isDark),
           const SizedBox(height: 16),
 
           // Brand
@@ -857,6 +837,172 @@ class _Step0BasicInfo extends StatelessWidget {
           ),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+// Category Cascade — 3-level dynamic dropdown
+// ═════════════════════════════════════════════════════════════
+
+class _CategoryCascade extends StatelessWidget {
+  final bool isDark;
+
+  const _CategoryCascade({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cp = context.watch<CategoryProvider>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Level 1 — root categories
+        _CascadeDropdown(
+          hint: 'Select category',
+          value: cp.selectedCategoryId,
+          items: cp.categories,
+          isDark: isDark,
+          onChanged: (id) =>
+              context.read<CategoryProvider>().selectCategory(id),
+        ),
+
+        // Level 2 — subcategories (shown after root is selected)
+        if (cp.selectedCategoryId != null) ...[
+          const SizedBox(height: 10),
+          if (cp.isSubcategoryLoading)
+            _CascadeShimmer(isDark: isDark)
+          else if (cp.subcategories.isNotEmpty)
+            _CascadeDropdown(
+              hint: 'Select subcategory (optional)',
+              value: cp.selectedSubcategoryId,
+              items: cp.subcategories,
+              isDark: isDark,
+              onChanged: (id) =>
+                  context.read<CategoryProvider>().selectSubcategory(id),
+            )
+          else
+            // API returned no subcategories for this root — that's fine
+            const SizedBox.shrink(),
+        ],
+
+        // Level 3 — sub-subcategories (shown after subcategory is selected)
+        if (cp.selectedSubcategoryId != null) ...[
+          const SizedBox(height: 10),
+          if (cp.isSubSubcategoryLoading)
+            _CascadeShimmer(isDark: isDark)
+          else if (cp.subSubcategories.isNotEmpty)
+            _CascadeDropdown(
+              hint: 'Select type (optional)',
+              value: cp.selectedSubSubcategoryId,
+              items: cp.subSubcategories,
+              isDark: isDark,
+              onChanged: (id) =>
+                  context.read<CategoryProvider>().selectSubSubcategory(id),
+            )
+          else
+            const SizedBox.shrink(),
+        ],
+      ],
+    );
+  }
+}
+
+/// A single cascade level dropdown that takes a [CategoryModel] list.
+class _CascadeDropdown extends StatelessWidget {
+  final String hint;
+  final String? value;
+  final List<CategoryModel> items;
+  final bool isDark;
+  final ValueChanged<String> onChanged;
+
+  const _CascadeDropdown({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
+    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
+    final textSec = isDark
+        ? AppColorsDark.textSecondary
+        : AppColorsLight.textSecondary;
+    final textPri = isDark
+        ? AppColorsDark.textPrimary
+        : AppColorsLight.textPrimary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      decoration: BoxDecoration(
+        color: bgCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: value != null
+              ? AppColors.primary.withValues(alpha: 0.5)
+              : border,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              fontFamily: 'DMSans',
+              fontSize: 13,
+              color: textSec,
+            ),
+          ),
+          dropdownColor: bgCard,
+          icon: Icon(Icons.keyboard_arrow_down, color: textSec, size: 18),
+          style: TextStyle(fontFamily: 'DMSans', fontSize: 13, color: textPri),
+          items: items
+              .map(
+                (cat) => DropdownMenuItem(value: cat.id, child: Text(cat.name)),
+              )
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onChanged(v);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Small loading placeholder shown while a cascade level is fetching.
+class _CascadeShimmer extends StatelessWidget {
+  final bool isDark;
+
+  const _CascadeShimmer({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
+    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
+
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: bgCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }
@@ -920,9 +1066,6 @@ class _Step1Images extends StatelessWidget {
                   color: slots[0] != null
                       ? AppColors.primary.withValues(alpha: 0.4)
                       : border,
-                  style: slots[0] == null
-                      ? BorderStyle.solid
-                      : BorderStyle.solid,
                 ),
               ),
               child: slots[0] != null
@@ -1158,7 +1301,6 @@ class _Step2Pricing extends StatelessWidget {
         controller: scrollCtrl,
         padding: const EdgeInsets.all(16),
         children: [
-          // Selling price
           _FieldLabel('Selling Price (₹) *'),
           _TextField(
             ctrl: priceCtrl,
@@ -1177,7 +1319,6 @@ class _Step2Pricing extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // MRP
           _FieldLabel('MRP / List Price (₹)'),
           _TextField(
             ctrl: mrpCtrl,
@@ -1197,7 +1338,6 @@ class _Step2Pricing extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // B2B price
           _FieldLabel('B2B / Wholesale Price (₹)'),
           _TextField(
             ctrl: b2bCtrl,
@@ -1211,7 +1351,6 @@ class _Step2Pricing extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Stock + min order
           Row(
             children: [
               Expanded(
@@ -1250,7 +1389,6 @@ class _Step2Pricing extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Free delivery toggle
           _ToggleRow(
             label: 'Offer Free Delivery',
             subtitle: 'Show free delivery badge on your listing',
@@ -1260,7 +1398,6 @@ class _Step2Pricing extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Pricing tips
           _InfoTip(
             text:
                 'Setting a higher MRP shows a discount % to buyers, '
@@ -1468,7 +1605,6 @@ class _Step3Details extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Compat builder
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -1557,7 +1693,6 @@ class _Step3Details extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Compat list
           ...List.generate(compatList.length, (i) {
             final c = compatList[i];
             return Container(
@@ -1566,7 +1701,9 @@ class _Step3Details extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -1605,7 +1742,6 @@ class _Step3Details extends StatelessWidget {
             ),
           const SizedBox(height: 24),
 
-          // Submission note
           _InfoTip(
             text:
                 'Your listing will be submitted for review. '
@@ -1645,7 +1781,6 @@ class _SuccessSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Animated checkmark container
           Container(
             width: 80,
             height: 80,
@@ -2081,7 +2216,6 @@ class _LiveMarginPreviewState extends State<_LiveMarginPreview> {
     final disc = (((mrp - price) / mrp) * 100).round();
     final saving = mrp - price;
     final bgCard = widget.isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    //final border = widget.isDark ? AppColorsDark.border : AppColorsLight.border;
 
     return Container(
       margin: const EdgeInsets.only(top: 4),

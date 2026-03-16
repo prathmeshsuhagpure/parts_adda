@@ -7,7 +7,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/router/app_routes.dart';
 import '../../features/cart/presentation/providers/cart_provider.dart';
-import 'loading_overlay.dart';
 
 class CustomerMainShell extends StatefulWidget {
   final Widget child;
@@ -37,11 +36,7 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
       AppRoutes.orders,
       AppRoutes.settings,
     ];
-    LoaderService().show(context);
-    Future.delayed(const Duration(seconds: 1), () {
-      LoaderService().hide();
       context.go(tabs[i]);
-    });
   }
 
   @override
