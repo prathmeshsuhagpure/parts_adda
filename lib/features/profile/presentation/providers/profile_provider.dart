@@ -598,6 +598,7 @@ class ProfileProvider extends ChangeNotifier {
       _setStatus(ProfileStatus.loaded);
     } catch (e) {
       _error = e.toString();
+      print("Error: ${e.toString()}");
       _setStatus(ProfileStatus.error);
     }
   }

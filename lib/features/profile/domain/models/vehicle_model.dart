@@ -52,8 +52,8 @@ class BrandModel {
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
     return BrandModel(
-      id: json['_id'],
-      name: json['name'],
+      id: json['_id'] ?? "",
+      name: json['name'] ?? "",
     );
   }
 
@@ -97,23 +97,29 @@ class GenerationModel {
   final String name;
   final int startYear;
   final int? endYear;
-  final String modelId;
+  final VehicleModel? model;
+  final String? modelId;
 
   const GenerationModel({
     required this.id,
     required this.name,
     required this.startYear,
     this.endYear,
-    required this.modelId,
+    this.model,
+    this.modelId,
   });
 
   factory GenerationModel.fromJson(Map<String, dynamic> json) {
+    final dynamic modelData = json['model'];
     return GenerationModel(
       id: json['_id'],
       name: json['name'],
       startYear: json['startYear'],
       endYear: json['endYear'],
-      modelId: json['model'],
+      model: modelData is Map<String, dynamic>
+          ? VehicleModel.fromJson(modelData)
+          : null,
+      modelId: modelData is String ? modelData : null,
     );
   }
 
@@ -122,7 +128,7 @@ class GenerationModel {
     "name": name,
     "startYear": startYear,
     "endYear": endYear,
-    "model": modelId,
+    "model": model != null ? model!.toJson() : modelId,
   };
 }
 
@@ -134,7 +140,8 @@ class VariantModel {
   final String transmission;
   final String trimLevel;
   final String emissionStandard;
-  final String generationId;
+  final GenerationModel? generation;
+  final String? generationId;
 
   const VariantModel({
     required this.id,
@@ -144,10 +151,12 @@ class VariantModel {
     required this.transmission,
     required this.trimLevel,
     required this.emissionStandard,
-    required this.generationId,
+    this.generation,
+    this.generationId,
   });
 
   factory VariantModel.fromJson(Map<String, dynamic> json) {
+    final dynamic genData = json['generation'];
     return VariantModel(
       id: json['_id'],
       variantName: json['variantName'],
@@ -156,7 +165,10 @@ class VariantModel {
       transmission: json['transmission'],
       trimLevel: json['trimLevel'],
       emissionStandard: json['emissionStandard'],
-      generationId: json['generation'],
+      generation: genData is Map<String, dynamic>
+          ? GenerationModel.fromJson(genData)
+          : null,
+      generationId: genData is String ? genData : null,
     );
   }
 
@@ -168,7 +180,7 @@ class VariantModel {
     "transmission": transmission,
     "trimLevel": trimLevel,
     "emissionStandard": emissionStandard,
-    "generation": generationId,
+    "generation": generation != null ? generation!.toJson() : generationId,
   };
 
   String get displayName => "$variantName • $fuelType • $transmission";

@@ -142,7 +142,8 @@ class UserRepository {
 
   Future<List<UserVehicleModel>> getUserVehicles() async {
     final res = await dio.get(ApiEndpoints.getVehicles);
-    return (res.data['data']['vehicles'] as List)
+
+    return (res.data['data'] as List)
         .map((e) => UserVehicleModel.fromJson(e))
         .toList();
   }

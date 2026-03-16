@@ -335,7 +335,9 @@ class _VehicleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final variant = vehicle.variant;
-    final carName = brand;
+    final generation = variant.generation;
+    final model = generation?.model;
+    final brandName = model?.displayName ?? '—';
 
     return Container(
       decoration: BoxDecoration(
@@ -402,11 +404,11 @@ class _VehicleCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(carName?.name ?? '—',
+                              Text("$brandName ${variant.generation!.name}",
                                 style: const TextStyle(
                                   fontFamily: 'DMSans',
                                   fontWeight: FontWeight.w500,
-                                  fontSize: 11,
+                                  fontSize: 18,
                                   color: Colors.white70,
                                 ),
                               ),
@@ -416,7 +418,7 @@ class _VehicleCard extends StatelessWidget {
                                 style: const TextStyle(
                                   fontFamily: 'Syne',
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 18,
+                                  fontSize: 11,
                                   color: Colors.white,
                                 ),
                               ),
