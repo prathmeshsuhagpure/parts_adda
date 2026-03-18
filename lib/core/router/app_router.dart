@@ -36,7 +36,7 @@ import '../../shared/widgets/main_shell.dart';
 import 'app_routes.dart';
 
 class AppRouter {
-  static final _rootKey = GlobalKey<NavigatorState>();
+  static final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
   static final customerShellNavigatorKey = GlobalKey<NavigatorState>(
     debugLabel: 'customerShell',
   );
@@ -44,9 +44,9 @@ class AppRouter {
     debugLabel: 'dealerShell',
   );
 
-  static GoRouter router(
-    AuthProvider authProvider
-  ) => GoRouter(
+  static GlobalKey<NavigatorState> get rootNavigatorKey => _rootKey;
+
+  static GoRouter router(AuthProvider authProvider) => GoRouter(
     navigatorKey: _rootKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
@@ -99,34 +99,54 @@ class AppRouter {
       return null;
     },
     routes: [
-      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
+      GoRoute(
+        path: AppRoutes.splash,
+        name: "splash",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const SplashScreen()),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (_, _) => const OnboardingScreen(),
+        name: "onboarding",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const OnboardingScreen()),
       ),
-      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
+
+      GoRoute(
+        path: AppRoutes.login,
+        name: "login",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const LoginScreen()),
+      ),
       GoRoute(
         path: AppRoutes.register,
-        builder: (_, _) => const RegisterScreen(),
+        name: "register",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const RegisterScreen()),
       ),
       GoRoute(
         path: AppRoutes.b2bRegister,
-        builder: (_, _) => const B2bRegisterScreen(),
+        name: "b2bRegister",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const B2bRegisterScreen()),
       ),
 
       // ── Bottom-nav shell
       ShellRoute(
         navigatorKey: customerShellNavigatorKey,
+        parentNavigatorKey: _rootKey,
         builder: (_, _, child) => CustomerMainShell(child: child),
         routes: [
           GoRoute(
             path: AppRoutes.home,
+            name: "home",
             pageBuilder: (context, state) =>
                 MaterialPage(key: state.pageKey, child: const HomeScreen()),
           ),
 
           GoRoute(
             path: AppRoutes.wishlist,
+            name: "wishlist",
             pageBuilder: (context, state) =>
                 MaterialPage(key: state.pageKey, child: const WishlistScreen()),
           ),
@@ -140,12 +160,14 @@ class AppRouter {
 
           GoRoute(
             path: AppRoutes.orders,
+            name: "orders",
             pageBuilder: (context, state) =>
                 MaterialPage(key: state.pageKey, child: const OrdersScreen()),
           ),
 
           GoRoute(
             path: AppRoutes.settings,
+            name: "settings",
             pageBuilder: (context, state) =>
                 MaterialPage(key: state.pageKey, child: const SettingsScreen()),
           ),
@@ -154,100 +176,165 @@ class AppRouter {
 
       ShellRoute(
         navigatorKey: _dealerShellKey,
+        parentNavigatorKey: _rootKey,
         builder: (_, _, child) => DealerShell(child: child),
         routes: [
           GoRoute(
             path: AppRoutes.dealerHome,
-            builder: (_, _) => const DealerDashboardScreen(),
+            name: "dealerHome",
+            pageBuilder: (context, state) => MaterialPage(
+              key: state.pageKey,
+              child: const DealerDashboardScreen(),
+            ),
           ),
 
           GoRoute(
             path: AppRoutes.dealerOrders,
-            builder: (_, _) => const DealerOrdersScreen(),
+            name: "dealerOrders",
+            pageBuilder: (context, state) => MaterialPage(
+              key: state.pageKey,
+              child: const DealerOrdersScreen(),
+            ),
           ),
 
           GoRoute(
             path: AppRoutes.dealerInventory,
-            builder: (_, _) => const InventoryScreen(),
+            name: "dealerInventory",
+            pageBuilder: (context, state) => MaterialPage(
+              key: state.pageKey,
+              child: const InventoryScreen(),
+            ),
           ),
 
           GoRoute(
             path: AppRoutes.dealerProfile,
-            builder: (_, _) => const ProfileScreen(),
+            name: "dealerProfile",
+            pageBuilder: (context, state) =>
+                MaterialPage(key: state.pageKey, child: const ProfileScreen()),
           ),
         ],
       ),
       GoRoute(
         path: AppRoutes.editProfile,
-        builder: (_, _) => EditProfileScreen(),
+        name: "editProfile",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const EditProfileScreen()),
       ),
       GoRoute(
         path: AppRoutes.addProduct,
-        builder: (_, _) => const AddProductScreen(),
+        name: "addProduct",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const AddProductScreen()),
       ),
       GoRoute(
         path: AppRoutes.allCategories,
-        builder: (_, _) => AllCategoriesScreen(),
+        name: "allCategories",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: const AllCategoriesScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.subCategory,
-        builder: (_, state) => SubCategoryScreen(
-          categoryId: state.pathParameters['id']!,
-          categoryName: state.uri.queryParameters['name'] ?? '',
+        name: "subCategory",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: SubCategoryScreen(
+            categoryId: state.pathParameters['id']!,
+            categoryName: state.uri.queryParameters['name'] ?? '',
+          ),
         ),
       ),
       GoRoute(
         path: AppRoutes.category,
-        builder: (_, state) => CategoryScreen(
-          categoryId: state.pathParameters['id']!,
-          categoryName: state.uri.queryParameters['name'] ?? '',
+        name: "category",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: CategoryScreen(
+            categoryId: state.pathParameters['id']!,
+            categoryName: state.uri.queryParameters['name'] ?? '',
+          ),
         ),
       ),
       GoRoute(
         path: AppRoutes.partDetail,
-        builder: (_, state) =>
-            PartDetailScreen(partId: state.pathParameters['id']!),
+        name: "partDetail",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: PartDetailScreen(partId: state.pathParameters['id']!),
+        ),
       ),
-      GoRoute(path: AppRoutes.filters, builder: (_, _) => const FilterScreen()),
+      GoRoute(
+        path: AppRoutes.filters,
+        name: "filters",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const FilterScreen()),
+      ),
       GoRoute(
         path: AppRoutes.search,
-        builder: (context, state) =>
-            SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        name: "search",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: SearchScreen(initialQuery: state.uri.queryParameters['q']),
+        ),
       ),
       GoRoute(
         path: AppRoutes.checkout,
-        builder: (_, _) => const CheckoutScreen(),
+        name: "checkout",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const CheckoutScreen()),
       ),
       GoRoute(
         path: AppRoutes.selectAddress,
-        builder: (_, _) => const AddressScreen(),
+        name: "selectAddress",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const AddressScreen()),
       ),
       GoRoute(
         path: AppRoutes.orderSuccess,
-        builder: (_, state) =>
-            OrderSuccessScreen(orderId: state.extra as String? ?? ''),
+        name: "orderSuccess",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: OrderSuccessScreen(orderId: state.extra as String? ?? ''),
+        ),
       ),
       GoRoute(
         path: AppRoutes.orderDetail,
-        builder: (_, state) =>
-            OrderDetailScreen(orderId: state.pathParameters['id']!),
+        name: "orderDetail",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: OrderDetailScreen(orderId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.tracking,
-        builder: (_, state) =>
-            TrackingScreen(orderId: state.pathParameters['id']!),
+        name: "tracking",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: TrackingScreen(orderId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.savedAddresses,
-        builder: (_, _) => const SavedAddressesScreen(),
+        name: "savedAddresses",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: const SavedAddressesScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.myVehicles,
-        builder: (_, _) => const MyVehiclesScreen(),
+        name: "myVehicles",
+        pageBuilder: (context, state) =>
+            MaterialPage(key: state.pageKey, child: const MyVehiclesScreen()),
       ),
       GoRoute(
         path: AppRoutes.notifications,
-        builder: (_, _) => const NotificationsScreen(),
+        name: "notifications",
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: const NotificationsScreen(),
+        ),
       ),
     ],
   );

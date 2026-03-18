@@ -6,7 +6,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../category/presentation/providers/catalog_provider.dart';
 
 class _Banner {
@@ -234,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             actions: [
               GestureDetector(
-                onTap: () => context.push(AppRoutes.notifications),
+                onTap: () => context.go(AppRoutes.notifications),
                 child: Container(
                   margin: const EdgeInsets.only(right: 14),
                   padding: const EdgeInsets.all(8),

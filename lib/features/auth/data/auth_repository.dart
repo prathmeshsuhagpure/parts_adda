@@ -87,8 +87,8 @@ class AuthRepository {
         data: {
           "shopName": businessName,
           "name": contactName,
-          "gstNumber" : gstNumber,
-          "panNumber" : panNumber,
+          "gstNumber": gstNumber,
+          "panNumber": panNumber,
           "phone": phone,
           "email": email,
           "address": address,
@@ -123,12 +123,15 @@ class AuthRepository {
     }
   }
 
-
   Future<void> logout() async {
     try {
       await dio.post(ApiEndpoints.logout);
     } catch (e) {
       throw Exception('Logout failed');
     }
+  }
+
+  Future<void> updateFcmToken(String token) async {
+    await dio.post(ApiEndpoints.registerFcmToken, data: {"fcmToken": token});
   }
 }

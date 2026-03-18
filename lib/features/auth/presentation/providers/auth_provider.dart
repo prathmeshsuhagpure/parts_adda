@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/auth_repository.dart';
@@ -93,6 +94,7 @@ class AuthProvider extends ChangeNotifier {
       _user = token.user;
       _status = AuthStatus.authenticated;
       _error = null;
+      await _handleFCMToken();
     } catch (e) {
       _status = AuthStatus.unauthenticated;
       _error = _parseError(e);
@@ -120,6 +122,7 @@ class AuthProvider extends ChangeNotifier {
       _user = token.user;
       _status = AuthStatus.authenticated;
       _error = null;
+      await _handleFCMToken();
     } catch (e) {
       _status = AuthStatus.unauthenticated;
       _error = _parseError(e);
@@ -209,5 +212,31 @@ class AuthProvider extends ChangeNotifier {
   String _parseError(dynamic e) {
     if (e is Exception) return e.toString().replaceFirst('Exception: ', '');
     return e.toString();
+  }
+
+  Future<void> _handleFCMToken() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+
+      final token = await messaging.getToken();
+
+      if (token != null) {
+        print("FCM TOKEN 👉 $token");
+
+        await _repo.updateFcmToken(token);
+      }
+
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        print("REFRESHED TOKEN 👉 $newToken");
+
+        try {
+          await _repo.updateFcmToken(newToken);
+        } catch (e) {
+          print("FCM refresh error: $e");
+        }
+      });
+    } catch (e) {
+      print("FCM error: $e");
+    }
   }
 }

@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:parts_adda/core/api/api_endpoints.dart';
+import 'package:parts_adda/features/profile/domain/models/notification_model.dart';
 import '../domain/models/address_model.dart';
 import '../domain/models/vehicle_model.dart';
 import '../../auth/domain/models/user_model.dart';
+import '../presentation/screens/notifications_screen.dart';
 
 class UserRepository {
   final Dio dio;
@@ -192,6 +194,51 @@ class UserRepository {
       await dio.delete('/user/wishlist/$partId');
     } catch (e) {
       throw Exception('Failed to remove from wishlist');
+    }
+  }
+
+  /// GET NOTIFICATIONS
+  Future<List<NotificationModel>> fetchNotifications({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final res = await dio.get(
+        ApiEndpoints.notifications,
+        queryParameters: {"page": page, "limit": limit},
+      );
+
+      final List data = res.data['data'];
+
+      return data.map((e) => NotificationModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception("Failed to load notifications");
+    }
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    try {
+      await dio.post(ApiEndpoints.markNotificationRead(id));
+    } catch (e) {
+      throw Exception("Failed to mark notification as read");
+    }
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await dio.post(ApiEndpoints.markAllRead);
+    } catch (e) {
+      throw Exception("Failed to mark all notifications as read");
+    }
+  }
+
+  Future<int> getUnreadNotificationCount() async {
+    try {
+      final res = await dio.get(ApiEndpoints.notificationsUnreadCount);
+
+      return res.data['data']['count'] ?? 0;
+    } catch (e) {
+      throw Exception("Failed to fetch unread count");
     }
   }
 }

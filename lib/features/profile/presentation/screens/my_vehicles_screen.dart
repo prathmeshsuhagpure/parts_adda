@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -135,29 +134,6 @@ class _MyVehiclesScreenState extends State<MyVehiclesScreen> {
         ),
       ],
     ),
-    actions: [
-      Padding(
-        padding: const EdgeInsets.only(right: 12),
-        child: GestureDetector(
-          onTap: _openForm,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.add_rounded, size: 15, color: Colors.white),
-                const SizedBox(width: 4),
-                const Text('Add Vehicle', style: AppTextStyles.buttonSm),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ],
   );
 
   // ── Vehicle garage list ────────────────────────────────────
@@ -404,7 +380,8 @@ class _VehicleCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("$brandName ${variant.generation!.name}",
+                              Text(
+                                "$brandName ${variant.generation!.name}",
                                 style: const TextStyle(
                                   fontFamily: 'DMSans',
                                   fontWeight: FontWeight.w500,

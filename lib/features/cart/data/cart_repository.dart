@@ -19,6 +19,7 @@ class CartRepository {
 
       throw Exception("Invalid response");
     } on DioException catch (e) {
+      print("Error: ${e.toString()}");
       throw Exception("Error getting cart: ${e.message}");
     }
   }

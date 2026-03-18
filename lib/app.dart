@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parts_adda/features/dealer/presentation/providers/inventory_provider.dart';
-import 'package:parts_adda/features/profile/presentation/providers/wishlist_provider.dart';
+import 'package:parts_adda/features/profile/presentation/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 import 'core/api/api_client.dart';
 import 'core/constants/app_theme.dart';
@@ -92,7 +92,9 @@ class _PartsAddaAppState extends State<PartsAddaApp> {
         ChangeNotifierProvider(create: (_) => ProfileProvider(repo: _userRepo)),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => DealerOrderProvider()),
-        ChangeNotifierProvider(create: (_) => WishlistProvider()),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider(repo: _userRepo),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

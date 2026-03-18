@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "26449658647",
+    "project_id": "parts-adda",
+    "storage_bucket": "parts-adda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:26449658647:android:49156a0df0829c27c6ed52",
+        "android_client_info": {
+          "package_name": "com.example.parts_adda"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCx_Cur9XgXKpp4yVML0jmBsqA4moacWSA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
