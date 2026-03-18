@@ -36,6 +36,8 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isLoading => _status == AuthStatus.loading;
 
+  bool get isLoggedIn => _status == AuthStatus.authenticated;
+
   bool get seenOnboarding => _seenOnboarding;
 
   String? get dealerStatus => _dealerStatus;

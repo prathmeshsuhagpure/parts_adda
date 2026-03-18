@@ -23,6 +23,11 @@ class FCMService {
   Future<void> init() async {
     try {
       await _initLocalNotifications();
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
       final settings = await _messaging.requestPermission(
         alert: true,
         announcement: true,
@@ -42,10 +47,6 @@ class FCMService {
         print('❌ FCM: Notification permission denied');
       }
 
-      // Get FCM token
-      final token = await _messaging.getToken();
-      print('📱 FCM Token: $token');
-
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
@@ -54,8 +55,6 @@ class FCMService {
 
       // Handle initial message (app terminated)
       await _handleInitialMessage();
-
-      print('✅ FCM Service initialized successfully');
     } catch (e) {
       print('❌ FCM initialization error: $e');
     }
@@ -93,14 +92,6 @@ class FCMService {
   // ─── Handle Foreground Messages ────────────────────────────
   /// Called when app is in foreground
   void _handleForegroundMessage(RemoteMessage message) {
-    print('🔔 Foreground Message Received');
-    print('Title: ${message.notification?.title}');
-    print('Body: ${message.notification?.body}');
-
-    // Parse notification data
-    final notificationData = _parseNotificationData(message);
-    print('Data: $notificationData');
-
     // Show local notification with custom handling
     _showForegroundNotification(message);
   }
@@ -130,29 +121,17 @@ class FCMService {
     }
   }
 
-  // ─── Parse Notification Data ──────────────────────────────
-  Map<String, dynamic> _parseNotificationData(RemoteMessage message) {
-    return {
-      'title': message.notification?.title,
-      'body': message.notification?.body,
-      'imageUrl':
-          message.notification?.android?.imageUrl ??
-          message.notification?.apple?.imageUrl,
-      'data': message.data,
-      'messageId': message.messageId,
-      'sentTime': message.sentTime,
-    };
-  }
-
   void _showForegroundNotification(RemoteMessage message) async {
-    print('📬 Showing foreground notification: ${message.notification?.title}');
-
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
           'default_channel',
           'Default Notifications',
           importance: Importance.max,
           priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+          visibility: NotificationVisibility.public,
+          ticker: 'ticker',
         );
 
     const NotificationDetails notificationDetails = NotificationDetails(
@@ -171,7 +150,6 @@ class FCMService {
   // ─── Route to Appropriate Screen ───────────────────────────
   void _routeToNotificationScreen(RemoteMessage message) {
     if (navigatorKey?.currentContext == null) {
-      print('⚠️ Navigator context not available');
       return;
     }
 

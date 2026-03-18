@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parts_adda/shared/widgets/loading_overlay.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -245,7 +246,7 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   // ── Body ───────────────────────────────────────────────────
   Widget _buildBody(OrderProvider prov) {
-    if (prov.isListLoading) return _shimmerList();
+    if (prov.isListLoading) return AppShimmerList(isDark: _d);
     if (prov.listStatus == OrderStatus.error) return _errorState(prov);
 
     return TabBarView(
@@ -294,15 +295,6 @@ class _OrdersScreenState extends State<OrdersScreen>
         return all;
     }
   }
-
-  // ── Shimmer loading ────────────────────────────────────────
-  Widget _shimmerList() => ListView.separated(
-    padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: 5,
-    separatorBuilder: (_, _) => const SizedBox(height: 12),
-    itemBuilder: (_, _) => _ShimmerCard(isDark: _d),
-  );
 
   // ── Error state ────────────────────────────────────────────
   Widget _errorState(OrderProvider prov) => Center(
@@ -927,190 +919,5 @@ class _ActionBtn extends StatelessWidget {
       ),
     );
     return fullWidth ? child : Expanded(child: child);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Shimmer Card
-// ═══════════════════════════════════════════════════════════════
-
-class _ShimmerCard extends StatefulWidget {
-  final bool isDark;
-
-  const _ShimmerCard({required this.isDark});
-
-  @override
-  State<_ShimmerCard> createState() => _ShimmerCardState();
-}
-
-class _ShimmerCardState extends State<_ShimmerCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final base = widget.isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput;
-    final bright = widget.isDark
-        ? AppColorsDark.bgCard2.withValues(alpha: 0.8)
-        : AppColorsLight.bgCard2;
-    final bgCard = widget.isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    final border = widget.isDark ? AppColorsDark.border : AppColorsLight.border;
-
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (_, _) {
-        final t = _anim.value;
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: bgCard,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Status + date row
-              Row(
-                children: [
-                  _Bone(
-                    width: 90,
-                    height: 22,
-                    base: base,
-                    bright: bright,
-                    t: t,
-                  ),
-                  const Spacer(),
-                  _Bone(
-                    width: 70,
-                    height: 14,
-                    base: base,
-                    bright: bright,
-                    t: t,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              // Image + content row
-              Row(
-                children: [
-                  _Bone(
-                    width: 52,
-                    height: 52,
-                    base: base,
-                    bright: bright,
-                    t: t,
-                    radius: 10,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _Bone(
-                          width: double.infinity,
-                          height: 14,
-                          base: base,
-                          bright: bright,
-                          t: t,
-                        ),
-                        const SizedBox(height: 8),
-                        _Bone(
-                          width: 100,
-                          height: 12,
-                          base: base,
-                          bright: bright,
-                          t: t,
-                        ),
-                        const SizedBox(height: 8),
-                        _Bone(
-                          width: 80,
-                          height: 12,
-                          base: base,
-                          bright: bright,
-                          t: t,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _Bone(
-                    width: 60,
-                    height: 20,
-                    base: base,
-                    bright: bright,
-                    t: t,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Divider(height: 1, color: border),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _Bone(
-                    width: 120,
-                    height: 14,
-                    base: base,
-                    bright: bright,
-                    t: t,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _Bone extends StatelessWidget {
-  final double width, height;
-  final Color base, bright;
-  final double t;
-  final double radius;
-
-  const _Bone({
-    required this.width,
-    required this.height,
-    required this.base,
-    required this.bright,
-    required this.t,
-    this.radius = 6,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: width == double.infinity ? null : width,
-    height: height,
-    decoration: BoxDecoration(
-      color: Color.lerp(base, bright, (math_sin(t * 3.14159)).abs())!,
-      borderRadius: BorderRadius.circular(radius),
-    ),
-  );
-
-  double math_sin(double x) {
-    final nx = x / 3.14159;
-    return 4 * nx * (1 - nx);
   }
 }

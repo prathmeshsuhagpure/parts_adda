@@ -160,7 +160,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  void _toast(String msg, {bool isError = false}) =>
+  void _toast(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg, style: AppTextStyles.bodyMd(_d)),

@@ -1,3 +1,4 @@
+/*
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,8 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../category/presentation/providers/catalog_provider.dart';
+import '../../../profile/domain/models/vehicle_model.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../profile/presentation/providers/notification_provider.dart';
 
 class _Banner {
@@ -117,27 +120,6 @@ final _brands = [
   ('Lumax', AppColors.primary),
 ];
 
-const _makes = [
-  'Maruti',
-  'Hyundai',
-  'Honda',
-  'Tata',
-  'Toyota',
-  'Kia',
-  'MG',
-  'Ford',
-];
-const _modelMap = <String, List<String>>{
-  'Maruti': ['Swift', 'Baleno', 'Vitara', 'Alto', 'Wagon R'],
-  'Hyundai': ['i20', 'Creta', 'Verna', 'Venue', 'Tucson'],
-  'Honda': ['City', 'Amaze', 'Jazz', 'WR-V', 'CR-V'],
-  'Tata': ['Nexon', 'Punch', 'Tiago', 'Harrier', 'Safari'],
-  'Toyota': ['Innova', 'Fortuner', 'Urban Cruiser', 'Camry'],
-  'Kia': ['Seltos', 'Sonet', 'Carnival', 'Carens'],
-  'MG': ['Hector', 'Astor', 'ZS EV', 'Gloster'],
-  'Ford': ['Figo', 'EcoSport', 'Endeavour'],
-};
-
 // ─── Home Screen ──────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
@@ -152,12 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
   late final PageController _bannerCtrl;
   Timer? _timer;
 
-  // Vehicle finder
-  String? _make, _model, _year;
+  // Vehicle finder state
+  String? _selectedBrandId, _selectedModelId, _selectedGenerationId, _selectedVariantId;
   bool _finderOpen = false;
-
-  // Recent searches (in-memory demo)
-  final _recent = <String>[];
 
   @override
   void initState() {
@@ -173,9 +152,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     });
+
     Future.microtask(() {
       if (!mounted) return;
+      // Load categories
       context.read<CategoryProvider>().loadCategories();
+      // Load vehicle brands
+      context.read<ProfileProvider>().loadBrands();
     });
   }
 
@@ -186,16 +169,50 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _doSearch(String q) {
-    if (q.trim().isNotEmpty && !_recent.contains(q)) {
-      setState(() => _recent.insert(0, q));
+  void _resetVehicleSelection() {
+    setState(() {
+      _selectedBrandId = null;
+      _selectedModelId = null;
+      _selectedGenerationId = null;
+      _selectedVariantId = null;
+    });
+  }
+
+  void _searchByVehicle() {
+    if (_selectedBrandId == null) return;
+
+    final profileProvider = context.read<ProfileProvider>();
+    final brand = profileProvider.brands.firstWhere(
+          (b) => b.id == _selectedBrandId,
+      orElse: () => BrandModel(id: _selectedBrandId!, name: 'Brand'),
+    );
+
+    String query = brand.name;
+
+    if (_selectedModelId != null) {
+      final model = profileProvider.models.firstWhere(
+            (m) => m.id == _selectedModelId,
+        orElse: () => VehicleModel(id: _selectedModelId!, name: 'Model',),
+      );
+      query += ' ${model.name}';
     }
-    context.push(AppRoutes.searchPath(query: q));
+
+    if (_selectedGenerationId != null) {
+      final generation = profileProvider.generations.firstWhere(
+            (g) => g.id == _selectedGenerationId,
+        orElse: () => GenerationModel(id: _selectedGenerationId!, name: 'Gen', modelId: '', startYear: 5),
+      );
+      query += ' ${generation.name}';
+    }
+
+    context.push(AppRoutes.searchPath(query: query.trim()));
+    _resetVehicleSelection();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: isDarkMode ? AppColorsDark.bg : AppColorsLight.bg,
       body: CustomScrollView(
@@ -234,89 +251,96 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             actions: [
-              Consumer<NotificationProvider>(
-                builder: (context, provider, _) {
-                  final hasUnread = provider.hasUnread;
-
-                  return GestureDetector(
-                    onTap: () => context.go(AppRoutes.notifications),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 14),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
+              GestureDetector(
+                onTap: () => context.go('/notifications'),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 14),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? AppColorsDark.bgCard
+                        : AppColorsLight.bgCard,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? AppColorsDark.border
+                          : AppColorsLight.border,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.notifications_outlined,
                         color: isDarkMode
-                            ? AppColorsDark.bgCard
-                            : AppColorsLight.bgCard,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isDarkMode
-                              ? AppColorsDark.border
-                              : AppColorsLight.border,
+                            ? AppColorsDark.textPrimary
+                            : AppColorsLight.textPrimary,
+                        size: 20,
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                      child: Stack(
-                        children: [
-                          Icon(
-                            Icons.notifications_outlined,
-                            color: isDarkMode
-                                ? AppColorsDark.textPrimary
-                                : AppColorsLight.textPrimary,
-                            size: 20,
-                          ),
-                          if (hasUnread)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                ),
               ),
             ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(58),
-              child: _SearchBar(onSearch: _doSearch),
+              child: _SearchBar(),
             ),
           ),
+
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
 
-                // ── Vehicle Finder ────────────────────────
-                _VehicleFinder(
-                  make: _make,
-                  model: _model,
-                  year: _year,
+                // ── Vehicle Finder with API ────────────────
+                _VehicleFinderWithAPI(
+                  selectedBrandId: _selectedBrandId,
+                  selectedModelId: _selectedModelId,
+                  selectedGenerationId: _selectedGenerationId,
+                  selectedVariantId: _selectedVariantId,
                   isOpen: _finderOpen,
                   onToggle: () => setState(() => _finderOpen = !_finderOpen),
-                  onMake: (v) => setState(() {
-                    _make = v;
-                    _model = null;
-                    _year = null;
+                  onBrandSelected: (brandId) => setState(() {
+                    _selectedBrandId = brandId;
+                    _selectedModelId = null;
+                    _selectedGenerationId = null;
+                    _selectedVariantId = null;
+                    if (brandId != null) {
+                      context.read<ProfileProvider>().loadModels(brandId);
+                    }
                   }),
-                  onModel: (v) => setState(() {
-                    _model = v;
-                    _year = null;
+                  onModelSelected: (modelId) => setState(() {
+                    _selectedModelId = modelId;
+                    _selectedGenerationId = null;
+                    _selectedVariantId = null;
+                    if (modelId != null) {
+                      context.read<ProfileProvider>().loadVehicleGenerations(modelId);
+                    }
                   }),
-                  onYear: (v) => setState(() => _year = v),
-                  onSearch: () {
-                    if (_make == null) return;
-                    _doSearch(
-                      [_make, _model, _year].whereType<String>().join(' '),
-                    );
-                  },
+                  onGenerationSelected: (generationId) => setState(() {
+                    _selectedGenerationId = generationId;
+                    _selectedVariantId = null;
+                    if (generationId != null) {
+                      context.read<ProfileProvider>().loadVariants(generationId);
+                    }
+                  }),
+                  onVariantSelected: (variantId) => setState(() {
+                    _selectedVariantId = variantId;
+                  }),
+                  onSearch: _searchByVehicle,
                 ),
                 const SizedBox(height: 20),
 
@@ -331,64 +355,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 // ── Categories ────────────────────────────
                 _SectionHeader(
                   title: 'Shop by Category',
-                  onSeeAll: () {
-                    context.push(AppRoutes.allCategories);
-                  },
+                  onSeeAll: () => context.push('/all-categories'),
                 ),
                 const SizedBox(height: 12),
-                _CategoryRow(onTap: _doSearch),
+                _CategoryGrid(),
                 const SizedBox(height: 24),
 
                 // ── Today's Deals ─────────────────────────
                 _SectionHeader(
                   title: "Today's Deals 🔥",
-                  onSeeAll: () => _doSearch('deals'),
+                  onSeeAll: () => context.push(AppRoutes.searchPath(query: 'deals')),
                 ),
                 const SizedBox(height: 12),
-                _DealsRow(
-                  onTap: (id) => context.push(AppRoutes.partDetailPath(id)),
-                ),
+                _DealsRow(),
+                const SizedBox(height: 24),
+
+                // ── Recently Viewed ───────────────────────
+                _RecentlyViewedSection(),
                 const SizedBox(height: 24),
 
                 // ── Top Brands ────────────────────────────
                 _SectionHeader(title: 'Top Brands'),
                 const SizedBox(height: 12),
-                _BrandsRow(onTap: _doSearch),
-                const SizedBox(height: 24),
-                _SectionHeader(title: "Recently Viewed"),
-                const SizedBox(height: 12),
-                _RecentlyViewedSection(),
-                const SizedBox(height: 24),
-                _WhyChooseSection(),
+                _BrandsRow(),
                 const SizedBox(height: 24),
 
                 // ── Trust badges ──────────────────────────
                 _TrustSection(),
-                const SizedBox(height: 24),
-
-                // ── Recent Searches ───────────────────────
-                if (_recent.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: 'Recent Searches',
-                    trailing: GestureDetector(
-                      onTap: () => setState(() => _recent.clear()),
-                      child: Text(
-                        'Clear all',
-                        style: AppTextStyles.bodySm(isDarkMode).copyWith(
-                          color: isDarkMode
-                              ? AppColorsDark.error
-                              : AppColorsLight.error,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _RecentSearchChips(
-                    items: _recent,
-                    onTap: _doSearch,
-                    onRemove: (q) => setState(() => _recent.remove(q)),
-                  ),
-                ],
                 const SizedBox(height: 100),
               ],
             ),
@@ -399,338 +392,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _RecentlyViewedSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    final recentItems = [
-      {
-        'id': '1',
-        'name': 'MODULE ASSY,AIRB...',
-        'price': '₹4,033.00',
-        'mrp': null,
-        'discount': null,
-        'make': 'MARUTI SUZUKI',
-        'sku': '4815OM...01-C48',
-        'image': 'https://via.placeholder.com/150/cccccc/cccccc?text=Part1',
-      },
-      {
-        'id': '2',
-        'name': 'MODULE ASSY,AIRB...',
-        'price': '₹4,178.00',
-        'mrp': '₹4,337.00',
-        'discount': '-4%',
-        'make': 'MARUTI SUZUKI',
-        'sku': '4815OM...I1-C48',
-        'image': 'https://via.placeholder.com/150/cccccc/cccccc?text=Part2',
-      },
-      {
-        'id': '3',
-        'name': 'WHER...',
-        'price': '₹1,899.00',
-        'mrp': null,
-        'discount': null,
-        'make': 'MARUTI',
-        'sku': '4811',
-        'image': 'https://via.placeholder.com/150/cccccc/cccccc?text=Part3',
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 220,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: recentItems.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, i) {
-              final item = recentItems[i];
-              return _RecentlyViewedCard(
-                item: item,
-                isDarkMode: isDarkMode,
-                onTap: () =>
-                    context.push(AppRoutes.partDetailPath(item['id']!)),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RecentlyViewedCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final bool isDarkMode;
-  final VoidCallback onTap;
-
-  const _RecentlyViewedCard({
-    required this.item,
-    required this.isDarkMode,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 155,
-        decoration: BoxDecoration(
-          color: isDarkMode ? AppColorsDark.bgCard : AppColorsLight.bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(
-            color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Stack(
-              children: [
-                Container(
-                  height: 90,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? AppColorsDark.bgInput
-                        : AppColorsLight.bgInput,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                  ),
-                  child: CachedNetworkImage(
-                    imageUrl: item['image'] as String,
-                    fit: BoxFit.contain,
-                    errorWidget: (_, _, _) => Icon(
-                      Icons.image_not_supported,
-                      color: isDarkMode
-                          ? AppColorsDark.textMuted
-                          : AppColorsLight.textMuted,
-                    ),
-                  ),
-                ),
-                // OEM badge
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColorsDark.info,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'OEM',
-                      style: TextStyle(
-                        fontFamily: 'Syne',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 9,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                // Discount badge
-                if (item['discount'] != null)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        item['discount'] as String,
-                        style: const TextStyle(
-                          fontFamily: 'Syne',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 9,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item['name'] as String,
-                    style: AppTextStyles.labelSm(isDarkMode),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(item['price'] as String, style: AppTextStyles.priceSm()),
-                  if (item['mrp'] != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'MRP: ${item['mrp']}',
-                      style: AppTextStyles.strikethrough(
-                        isDarkMode,
-                      ).copyWith(fontSize: 9),
-                    ),
-                  ],
-                  const SizedBox(height: 4),
-                  Text(
-                    item['make'] as String,
-                    style: AppTextStyles.bodyXs(isDarkMode).copyWith(
-                      color: isDarkMode
-                          ? AppColorsDark.textMuted
-                          : AppColorsLight.textMuted,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item['sku'] as String,
-                    style: AppTextStyles.bodyXs(isDarkMode).copyWith(
-                      color: isDarkMode
-                          ? AppColorsDark.textMuted
-                          : AppColorsLight.textMuted,
-                      fontSize: 8,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WhyChooseSection extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    const benefits = [
-      (
-        'Original Products',
-        'Only reliable parts from trusted\nAftermarket brands',
-        Icons.verified_outlined,
-      ),
-      (
-        'Affordable Rates',
-        'Repairing a damaged vehicle\nexpensive. Using the afterm\nproducts is a good solution i\non a budget',
-        Icons.local_offer_outlined,
-      ),
-    ];
-
-    return Padding(
-      padding: AppSpacing.screenPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RichText(
-            text: TextSpan(
-              text: 'Why Choose\n',
-              style: AppTextStyles.heading(isDarkMode),
-              children: [
-                TextSpan(
-                  text: 'Aftermarket Products ?',
-                  style: AppTextStyles.heading(
-                    isDarkMode,
-                  ).copyWith(color: AppColors.primary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            padding: EdgeInsets.zero,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.0,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-            ),
-            itemCount: benefits.length,
-            itemBuilder: (_, i) {
-              final (title, desc, icon) = benefits[i];
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? AppColorsDark.bgCard
-                      : AppColorsLight.bgCard,
-                  borderRadius: AppRadius.cardRadius,
-                  border: Border.all(
-                    color: isDarkMode
-                        ? AppColorsDark.border
-                        : AppColorsLight.border,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(icon, color: AppColors.primary, size: 18),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      title,
-                      style: AppTextStyles.labelMd(isDarkMode),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      desc,
-                      style: AppTextStyles.bodySm(isDarkMode).copyWith(
-                        color: isDarkMode
-                            ? AppColorsDark.textSecondary
-                            : AppColorsLight.textSecondary,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Search Bar ───────────────────────────────────────────────
 
 class _SearchBar extends StatelessWidget {
-  final ValueChanged<String> onSearch;
-
-  const _SearchBar({required this.onSearch});
+  const _SearchBar();
 
   @override
   Widget build(BuildContext context) {
@@ -738,7 +403,7 @@ class _SearchBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
       child: GestureDetector(
-        onTap: () => context.push(AppRoutes.search),
+        onTap: () => context.push('/search'),
         child: Container(
           height: 46,
           decoration: BoxDecoration(
@@ -769,6 +434,32 @@ class _SearchBar extends StatelessWidget {
                   ),
                 ),
               ),
+              Container(
+                margin: const EdgeInsets.all(6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.qr_code_scanner,
+                      color: AppColors.primary,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Scan',
+                      style: AppTextStyles.labelXs(isDarkMode)
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -777,31 +468,65 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ─── Vehicle Finder ───────────────────────────────────────────
+// ─── Vehicle Finder with API ──────────────────────────────────
 
-class _VehicleFinder extends StatelessWidget {
-  final String? make, model, year;
+class _VehicleFinderWithAPI extends StatelessWidget {
+  final String? selectedBrandId, selectedModelId, selectedGenerationId, selectedVariantId;
   final bool isOpen;
   final VoidCallback onToggle, onSearch;
-  final ValueChanged<String?> onMake, onModel, onYear;
+  final ValueChanged<String?> onBrandSelected, onModelSelected, onGenerationSelected, onVariantSelected;
 
-  const _VehicleFinder({
-    required this.make,
-    required this.model,
-    required this.year,
+  const _VehicleFinderWithAPI({
+    required this.selectedBrandId,
+    required this.selectedModelId,
+    required this.selectedGenerationId,
+    required this.selectedVariantId,
     required this.isOpen,
     required this.onToggle,
     required this.onSearch,
-    required this.onMake,
-    required this.onModel,
-    required this.onYear,
+    required this.onBrandSelected,
+    required this.onModelSelected,
+    required this.onGenerationSelected,
+    required this.onVariantSelected,
   });
+
+  String _getDisplayText(BuildContext context) {
+    final items = <String>[];
+
+    if (selectedBrandId != null) {
+      final provider = context.read<ProfileProvider>();
+      final brand = provider.brands.firstWhere(
+            (b) => b.id == selectedBrandId,
+        orElse: () => BrandModel(id: '', name: ''),
+      );
+      if (brand.name.isNotEmpty) items.add(brand.name);
+    }
+
+    if (selectedModelId != null) {
+      final provider = context.read<ProfileProvider>();
+      final model = provider.models.firstWhere(
+            (m) => m.id == selectedModelId,
+        orElse: () => VehicleModel(id: '', name: ''),
+      );
+      if (model.name.isNotEmpty) items.add(model.name);
+    }
+
+    if (selectedGenerationId != null) {
+      final provider = context.read<ProfileProvider>();
+      final generation = provider.generations.firstWhere(
+            (g) => g.id == selectedGenerationId,
+        orElse: () => GenerationModel(id: '', name: '', modelId: '', startYear: 5),
+      );
+      if (generation.name.isNotEmpty) items.add(generation.name);
+    }
+
+    return items.isNotEmpty ? items.join(' · ') : 'Select make · model · year';
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final years = List.generate(28, (i) => '${DateTime.now().year - i}');
-    final models = make != null ? (_modelMap[make] ?? <String>[]) : <String>[];
+    final profileProvider = context.watch<ProfileProvider>();
 
     return Padding(
       padding: AppSpacing.screenPadding,
@@ -849,13 +574,7 @@ class _VehicleFinder extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            make != null
-                                ? [
-                                    make,
-                                    model,
-                                    year,
-                                  ].whereType<String>().join(' · ')
-                                : 'Select make · model · year',
+                            _getDisplayText(context),
                             style: AppTextStyles.bodySm(isDarkMode),
                           ),
                         ],
@@ -890,41 +609,61 @@ class _VehicleFinder extends StatelessWidget {
                           : AppColorsLight.border,
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _DropField(
-                            label: 'Make',
-                            value: make,
-                            items: _makes,
-                            onChanged: onMake,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _DropField(
-                            label: 'Model',
-                            value: model,
-                            items: models,
-                            onChanged: make != null ? onModel : null,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _DropField(
-                            label: 'Year',
-                            value: year,
-                            items: years,
-                            onChanged: model != null ? onYear : null,
-                          ),
-                        ),
-                      ],
+
+                    // Brand Dropdown
+                    _APIDropField(
+                      label: 'Make',
+                      value: selectedBrandId,
+                      isLoading: profileProvider.brandsLoading,
+                      items: profileProvider.brands
+                          .map((b) => (b.id, b.name))
+                          .toList(),
+                      onChanged: onBrandSelected,
                     ),
                     const SizedBox(height: 12),
+
+                    // Model Dropdown
+                    _APIDropField(
+                      label: 'Model',
+                      value: selectedModelId,
+                      isLoading: profileProvider.modelsLoading,
+                      items: profileProvider.models
+                          .map((m) => (m.id, m.name))
+                          .toList(),
+                      onChanged: selectedBrandId != null ? onModelSelected : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Generation Dropdown
+                    _APIDropField(
+                      label: 'Year',
+                      value: selectedGenerationId,
+                      isLoading: profileProvider.generationsLoading,
+                      items: profileProvider.generations
+                          .map((g) => (g.id, g.name))
+                          .toList(),
+                      onChanged: selectedModelId != null ? onGenerationSelected : null,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Variant Dropdown (Optional)
+                    if (profileProvider.variants.isNotEmpty) ...[
+                      _APIDropField(
+                        label: 'Variant',
+                        value: selectedVariantId,
+                        isLoading: profileProvider.variantsLoading,
+                        items: profileProvider.variants
+                            .map((v) => (v.id, v.variantName))
+                            .toList(),
+                        onChanged: selectedGenerationId != null ? onVariantSelected : null,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: make != null ? onSearch : null,
+                        onPressed: selectedBrandId != null ? onSearch : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           disabledBackgroundColor: isDarkMode
@@ -960,15 +699,19 @@ class _VehicleFinder extends StatelessWidget {
   }
 }
 
-class _DropField extends StatelessWidget {
+// ─── API Dropdown Field ───────────────────────────────────────
+
+class _APIDropField extends StatelessWidget {
   final String label;
   final String? value;
-  final List<String> items;
+  final bool isLoading;
+  final List<(String, String)> items;
   final ValueChanged<String?>? onChanged;
 
-  const _DropField({
+  const _APIDropField({
     required this.label,
     required this.value,
+    required this.isLoading,
     required this.items,
     this.onChanged,
   });
@@ -977,12 +720,50 @@ class _DropField extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final active = value != null;
+    final isDisabled = onChanged == null;
+
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppColorsDark.bgInput : AppColorsLight.bgInput,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(AppColors.primary),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Loading $label...',
+              style: AppTextStyles.bodySm(isDarkMode),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: active
             ? AppColors.primary.withValues(alpha: 0.06)
-            : (isDarkMode ? AppColorsDark.bgInput : AppColorsLight.bgInput),
+            : (isDisabled
+            ? (isDarkMode
+            ? AppColorsDark.bgInput.withValues(alpha: 0.5)
+            : AppColorsLight.bgInput.withValues(alpha: 0.5))
+            : (isDarkMode
+            ? AppColorsDark.bgInput
+            : AppColorsLight.bgInput)),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: active
@@ -1002,6 +783,14 @@ class _DropField extends StatelessWidget {
             ),
           ),
           isExpanded: true,
+          disabledHint: Text(
+            'Select ${label.toLowerCase()} first',
+            style: AppTextStyles.bodyXs(isDarkMode).copyWith(
+              color: isDarkMode
+                  ? AppColorsDark.textMuted
+                  : AppColorsLight.textMuted,
+            ),
+          ),
           dropdownColor: isDarkMode
               ? AppColorsDark.bgCard
               : AppColorsLight.bgCard,
@@ -1017,18 +806,18 @@ class _DropField extends StatelessWidget {
                 ? AppColorsDark.textMuted
                 : AppColorsLight.textMuted,
           ),
-          onChanged: onChanged,
+          onChanged: isDisabled ? null : onChanged,
           items: items
               .map(
-                (s) => DropdownMenuItem(
-                  value: s,
-                  child: Text(
-                    s,
-                    style: AppTextStyles.bodySm(isDarkMode),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              )
+                (item) => DropdownMenuItem(
+              value: item.$1,
+              child: Text(
+                item.$2,
+                style: AppTextStyles.bodySm(isDarkMode),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
               .toList(),
         ),
       ),
@@ -1068,7 +857,7 @@ class _Banners extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             _banners.length,
-            (i) => AnimatedContainer(
+                (i) => AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               margin: const EdgeInsets.symmetric(horizontal: 3),
               width: idx == i ? 20 : 6,
@@ -1077,8 +866,8 @@ class _Banners extends StatelessWidget {
                 color: idx == i
                     ? AppColors.primary
                     : (isDarkMode
-                          ? AppColorsDark.textMuted
-                          : AppColorsLight.textMuted),
+                    ? AppColorsDark.textMuted
+                    : AppColorsLight.textMuted),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -1173,9 +962,11 @@ class _BannerCard extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback? onSeeAll;
-  final Widget? trailing;
 
-  const _SectionHeader({required this.title, this.onSeeAll, this.trailing});
+  const _SectionHeader({
+    required this.title,
+    this.onSeeAll,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1187,18 +978,15 @@ class _SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(title, style: AppTextStyles.heading(isDarkMode)),
           ),
-          if (trailing != null)
-            trailing!
-          else if (onSeeAll != null)
+          if (onSeeAll != null)
             GestureDetector(
               onTap: onSeeAll,
               child: Row(
                 children: [
                   Text(
                     'See all',
-                    style: AppTextStyles.bodySm(
-                      isDarkMode,
-                    ).copyWith(color: AppColors.primary),
+                    style: AppTextStyles.bodySm(isDarkMode)
+                        .copyWith(color: AppColors.primary),
                   ),
                   const Icon(
                     Icons.chevron_right,
@@ -1214,12 +1002,10 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Category Row ─────────────────────────────────────────────
+// ─── Category Grid ────────────────────────────────────────────
 
-class _CategoryRow extends StatelessWidget {
-  final ValueChanged<String> onTap;
-
-  const _CategoryRow({required this.onTap});
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid();
 
   @override
   Widget build(BuildContext context) {
@@ -1228,58 +1014,106 @@ class _CategoryRow extends StatelessWidget {
 
     if (provider.isCategoryLoading) {
       return const SizedBox(
-        height: 94,
+        height: 200,
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     final categories = provider.categories;
+    final displayCategories = categories.take(3).toList();
+    final hasMore = categories.length > 3;
 
-    return SizedBox(
-      height: 94,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final cat = categories[i];
-          return GestureDetector(
-            onTap: () =>
-                context.push(AppRoutes.subCategoryPath(cat.id, cat.name)),
-            child: Column(
-              children: [
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? AppColorsDark.bgCard
-                        : AppColorsLight.bgCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? AppColorsDark.border
-                          : AppColorsLight.border,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      cat.icon ?? '📦',
-                      style: const TextStyle(fontSize: 28),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  cat.name,
-                  style: AppTextStyles.bodySm(isDarkMode),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+    return Padding(
+      padding: AppSpacing.screenPadding,
+      child: Column(
+        children: [
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.0,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 12,
             ),
-          );
-        },
+            itemCount: displayCategories.length,
+            itemBuilder: (_, i) {
+              final cat = displayCategories[i];
+              return GestureDetector(
+                onTap: () => context.push('/sub-category/${cat.id}/${cat.name}'),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDarkMode
+                              ? AppColorsDark.bgCard
+                              : AppColorsLight.bgCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkMode
+                                ? AppColorsDark.border
+                                : AppColorsLight.border,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            cat.icon ?? '📦',
+                            style: const TextStyle(fontSize: 48),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      cat.name,
+                      style: AppTextStyles.bodySm(isDarkMode),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          if (hasMore) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.push('/all-categories'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(
+                    color: isDarkMode
+                        ? AppColorsDark.border
+                        : AppColorsLight.border,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'See All Categories',
+                      style: AppTextStyles.labelMd(isDarkMode)
+                          .copyWith(color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.arrow_forward,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1288,9 +1122,7 @@ class _CategoryRow extends StatelessWidget {
 // ─── Deals Row ────────────────────────────────────────────────
 
 class _DealsRow extends StatelessWidget {
-  final ValueChanged<String> onTap;
-
-  const _DealsRow({required this.onTap});
+  const _DealsRow();
 
   @override
   Widget build(BuildContext context) {
@@ -1301,7 +1133,7 @@ class _DealsRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _deals.length,
         separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (_, i) => _DealCard(deal: _deals[i], onTap: onTap),
+        itemBuilder: (_, i) => _DealCard(deal: _deals[i]),
       ),
     );
   }
@@ -1309,15 +1141,14 @@ class _DealsRow extends StatelessWidget {
 
 class _DealCard extends StatelessWidget {
   final _Deal deal;
-  final ValueChanged<String> onTap;
 
-  const _DealCard({required this.deal, required this.onTap});
+  const _DealCard({required this.deal});
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
-      onTap: () => onTap(deal.id),
+      onTap: () => context.push('/part-detail/${deal.id}'),
       child: Container(
         width: 155,
         decoration: BoxDecoration(
@@ -1330,7 +1161,6 @@ class _DealCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image / icon placeholder
             Stack(
               children: [
                 Container(
@@ -1351,7 +1181,6 @@ class _DealCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Discount badge
                 Positioned(
                   top: 8,
                   left: 8,
@@ -1377,32 +1206,8 @@ class _DealCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Car compat
-                Positioned(
-                  bottom: 6,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      deal.make,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white70,
-                        fontFamily: 'DMSans',
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
@@ -1431,11 +1236,177 @@ class _DealCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         deal.mrp,
-                        style: AppTextStyles.strikethrough(
-                          isDarkMode,
-                        ).copyWith(fontSize: 10),
+                        style: AppTextStyles.strikethrough(isDarkMode)
+                            .copyWith(fontSize: 10),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Recently Viewed Section ──────────────────────────────────
+
+class _RecentlyViewedSection extends StatelessWidget {
+  const _RecentlyViewedSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // TODO: Replace with actual data from SharedPreferences or provider
+    // For now showing mock data
+    final recentItems = [
+      {
+        'id': '1',
+        'name': 'MODULE ASSY,AIRB...',
+        'price': '₹4,033.00',
+        'mrp': null,
+        'discount': null,
+        'make': 'MARUTI SUZUKI',
+        'sku': '4815OM...01-C48',
+        'image': null,
+      },
+    ];
+
+    if (recentItems.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Recently Viewed'),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: recentItems.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, i) {
+              final item = recentItems[i];
+              return _RecentlyViewedCard(
+                item: item,
+                isDarkMode: isDarkMode,
+                onTap: () => context.push('/part-detail/${item['id']}'),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentlyViewedCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final bool isDarkMode;
+  final VoidCallback onTap;
+
+  const _RecentlyViewedCard({
+    required this.item,
+    required this.isDarkMode,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 155,
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppColorsDark.bgCard : AppColorsLight.bgCard,
+          borderRadius: AppRadius.cardRadius,
+          border: Border.all(
+            color: isDarkMode ? AppColorsDark.border : AppColorsLight.border,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                Container(
+                  height: 90,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? AppColorsDark.bgInput
+                        : AppColorsLight.bgInput,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                  ),
+                  child: item['image'] != null
+                      ? CachedNetworkImage(
+                    imageUrl: item['image'],
+                    fit: BoxFit.contain,
+                  )
+                      : Icon(
+                    Icons.settings,
+                    color: isDarkMode
+                        ? AppColorsDark.textMuted
+                        : AppColorsLight.textMuted,
+                  ),
+                ),
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColorsDark.info,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'OEM',
+                      style: TextStyle(
+                        fontFamily: 'Syne',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 9,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['name'] as String,
+                    style: AppTextStyles.labelSm(isDarkMode),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item['price'] as String,
+                    style: AppTextStyles.priceSm(),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item['make'] as String,
+                    style: AppTextStyles.bodyXs(isDarkMode).copyWith(
+                      color: isDarkMode
+                          ? AppColorsDark.textMuted
+                          : AppColorsLight.textMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1450,9 +1421,7 @@ class _DealCard extends StatelessWidget {
 // ─── Brands Row ───────────────────────────────────────────────
 
 class _BrandsRow extends StatelessWidget {
-  final ValueChanged<String> onTap;
-
-  const _BrandsRow({required this.onTap});
+  const _BrandsRow();
 
   @override
   Widget build(BuildContext context) {
@@ -1467,7 +1436,7 @@ class _BrandsRow extends StatelessWidget {
         itemBuilder: (_, i) {
           final (name, color) = _brands[i];
           return GestureDetector(
-            onTap: () => onTap(name),
+            onTap: () => context.push(AppRoutes.searchPath(query: name)),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
@@ -1506,15 +1475,17 @@ class _BrandsRow extends StatelessWidget {
 // ─── Trust Section ────────────────────────────────────────────
 
 class _TrustSection extends StatelessWidget {
+  const _TrustSection();
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     const items = [
       (Icons.verified_outlined, 'Genuine Parts', 'OEM & certified aftermarket'),
       (
-        Icons.local_shipping_outlined,
-        'Fast Delivery',
-        'Same-day in 15+ cities',
+      Icons.local_shipping_outlined,
+      'Fast Delivery',
+      'Same-day in 15+ cities',
       ),
       (Icons.currency_rupee, 'Best Price', 'Price-match guarantee'),
       (Icons.replay_outlined, 'Easy Returns', '7-day hassle-free policy'),
@@ -1541,120 +1512,47 @@ class _TrustSection extends StatelessWidget {
           children: items
               .map(
                 (item) => Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(item.$1, color: AppColors.primary, size: 15),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            item.$2,
-                            style: AppTextStyles.labelSm(isDarkMode).copyWith(
-                              fontSize: 11,
-                              color: isDarkMode
-                                  ? AppColorsDark.textPrimary
-                                  : AppColorsLight.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            item.$3,
-                            style: AppTextStyles.bodyXs(isDarkMode),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(item.$1,
+                      color: AppColors.primary, size: 15),
                 ),
-              )
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.$2,
+                        style: AppTextStyles.labelSm(isDarkMode)
+                            .copyWith(
+                          fontSize: 11,
+                          color: isDarkMode
+                              ? AppColorsDark.textPrimary
+                              : AppColorsLight.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        item.$3,
+                        style: AppTextStyles.bodyXs(isDarkMode),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )
               .toList(),
         ),
       ),
     );
   }
-}
-
-// ─── Recent Searches ─────────────────────────────────────────
-
-class _RecentSearchChips extends StatelessWidget {
-  final List<String> items;
-  final ValueChanged<String> onTap;
-  final ValueChanged<String> onRemove;
-
-  const _RecentSearchChips({
-    required this.items,
-    required this.onTap,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items
-            .map(
-              (q) => GestureDetector(
-                onTap: () => onTap(q),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? AppColorsDark.bgCard
-                        : AppColorsLight.bgCard,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? AppColorsDark.border
-                          : AppColorsLight.border,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.history,
-                        size: 12,
-                        color: isDarkMode
-                            ? AppColorsDark.textMuted
-                            : AppColorsLight.textMuted,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(q, style: AppTextStyles.bodySm(isDarkMode)),
-                      const SizedBox(width: 5),
-                      GestureDetector(
-                        onTap: () => onRemove(q),
-                        child: Icon(
-                          Icons.close,
-                          size: 11,
-                          color: isDarkMode
-                              ? AppColorsDark.textMuted
-                              : AppColorsLight.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
+}*/

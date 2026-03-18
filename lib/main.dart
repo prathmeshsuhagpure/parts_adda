@@ -12,9 +12,6 @@ final GlobalKey<NavigatorState> fcmNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-
-  print('💀 Background Message: ${message.notification?.title}');
-  print('📦 Message Data: ${message.data}');
 }
 
 void main() async {
@@ -52,14 +49,11 @@ void main() async {
 
 Future<void> _initializeFCMService() async {
   try {
-    // Set the navigator key for FCM routing
     FCMService.navigatorKey = AppRouter.rootNavigatorKey;
 
-    // Initialize FCM service
     final fcmService = FCMService();
     await fcmService.init();
 
-    print('✅ FCM Service initialized successfully');
   } catch (e) {
     print('❌ FCM initialization error: $e');
   }

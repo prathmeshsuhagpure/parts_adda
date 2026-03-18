@@ -9,10 +9,6 @@ import '../../../auth/domain/models/user_model.dart';
 import '../../domain/models/notification_model.dart';
 import '../providers/notification_provider.dart';
 
-// ═══════════════════════════════════════════════════════════════
-// Notification metadata & helpers
-// ═══════════════════════════════════════════════════════════════
-
 IconData _notifIcon(NotifType t) {
   switch (t) {
     case NotifType.order:
@@ -86,10 +82,10 @@ const _kCustomerTabs = ['All', 'Orders', 'Offers', 'System'];
 const _kDealerTabs = ['All', 'Orders', 'Inventory', 'Payments', 'Reviews'];
 
 List<NotificationModel> _filterByTab(
-    List<NotificationModel> items,
-    String tab,
-    bool isDealer,
-    ) {
+  List<NotificationModel> items,
+  String tab,
+  bool isDealer,
+) {
   if (tab == 'All') return items;
   if (isDealer) {
     switch (tab) {
@@ -108,10 +104,10 @@ List<NotificationModel> _filterByTab(
         return items
             .where(
               (n) =>
-          n.type == NotifType.order ||
-              n.type == NotifType.delivery ||
-              n.type == NotifType.payment,
-        )
+                  n.type == NotifType.order ||
+                  n.type == NotifType.delivery ||
+                  n.type == NotifType.payment,
+            )
             .toList();
       case 'Offers':
         return items.where((n) => n.type == NotifType.promo).toList();
@@ -121,10 +117,6 @@ List<NotificationModel> _filterByTab(
   }
   return items;
 }
-
-// ═══════════════════════════════════════════════════════════════
-// NotificationsScreen
-// ═══════════════════════════════════════════════════════════════
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -259,8 +251,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             },
             child: Text(
               'Clear All',
-              style: AppTextStyles.labelMd(_d)
-                  .copyWith(color: AppColorsDark.error),
+              style: AppTextStyles.labelMd(
+                _d,
+              ).copyWith(color: AppColorsDark.error),
             ),
           ),
         ],
@@ -272,11 +265,20 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   @override
   Widget build(BuildContext context) {
     final tabs = _isDealer ? _kDealerTabs : _kCustomerTabs;
-    return Scaffold(
-      backgroundColor: _bg,
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [_buildSliverHeader(tabs)],
-        body: _buildBody(),
+
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go(AppRoutes.home);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _bg,
+        body: NestedScrollView(
+          headerSliverBuilder: (_, _) => [_buildSliverHeader(tabs)],
+          body: _buildBody(),
+        ),
       ),
     );
   }
@@ -284,7 +286,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   // ── Sliver header (AppBar + tabs) ──────────────────────────
   Widget _buildSliverHeader(List<String> tabs) {
     return Consumer<NotificationProvider>(
-      builder: (_, provider, __) {
+      builder: (_, provider, _) {
         final unreadCount = provider.unreadCount;
 
         return SliverAppBar(
@@ -294,9 +296,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           scrolledUnderElevation: 0,
           expandedHeight: 0,
           leading: IconButton(
-            icon:
-            Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _txtPri),
-            onPressed: () => context.pop(),
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: _txtPri,
+            ),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(AppRoutes.home);
+              }
+            },
           ),
           title: Row(
             children: [
@@ -325,7 +336,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 margin: const EdgeInsets.only(right: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _showUnreadOnly
                       ? AppColors.primary.withValues(alpha: 0.12)
@@ -343,8 +357,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     Icon(
                       Icons.mark_email_unread_outlined,
                       size: 15,
-                      color:
-                      _showUnreadOnly ? AppColors.primary : _txtSec,
+                      color: _showUnreadOnly ? AppColors.primary : _txtSec,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -394,7 +407,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 border: Border(bottom: BorderSide(color: _border)),
               ),
               child: Consumer<NotificationProvider>(
-                builder: (_, provider, __) {
+                builder: (_, provider, _) {
                   return TabBar(
                     controller: _tabCtrl,
                     isScrollable: true,
@@ -416,7 +429,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     tabs: tabs.map((t) {
-                      final count = _unreadInTab(provider.notifications, t, tabs);
+                      final count = _unreadInTab(
+                        provider.notifications,
+                        t,
+                        tabs,
+                      );
                       return Tab(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -459,10 +476,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   }
 
   int _unreadInTab(
-      List<NotificationModel> items,
-      String tab,
-      List<String> allTabs,
-      ) {
+    List<NotificationModel> items,
+    String tab,
+    List<String> allTabs,
+  ) {
     final list = _filterByTab(items, tab, _isDealer);
     return list.where((n) => !n.isRead).length;
   }
@@ -470,12 +487,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   // ── Body ───────────────────────────────────────────────────
   Widget _buildBody() {
     return Consumer<NotificationProvider>(
-      builder: (_, provider, __) {
+      builder: (_, provider, _) {
         if (provider.isLoading) {
           return Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-            ),
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
         }
 
@@ -499,7 +514,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               children: [
                 _DateHeader(label: entry.key, isDark: _d),
                 ...entry.value.map(
-                      (n) => _NotifTile(
+                  (n) => _NotifTile(
                     item: n,
                     isDark: _d,
                     onTap: () => _tapNotif(n),
@@ -516,8 +531,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   // ── Group notifications by relative date ──────────────────
   Map<String, List<NotificationModel>> _groupByDate(
-      List<NotificationModel> items,
-      ) {
+    List<NotificationModel> items,
+  ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -575,7 +590,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             _showUnreadOnly
                 ? 'You have no unread notifications.'
                 : 'You\'ll see order updates, offers, and '
-                '${_isDealer ? 'new orders' : 'delivery alerts'} here.',
+                      '${_isDealer ? 'new orders' : 'delivery alerts'} here.',
             style: AppTextStyles.bodyMd(_d).copyWith(color: _txtSec),
             textAlign: TextAlign.center,
           ),
@@ -585,8 +600,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               onTap: () => setState(() => _showUnreadOnly = false),
               child: Text(
                 'Show all notifications',
-                style: AppTextStyles.labelMd(_d)
-                    .copyWith(color: AppColors.primary),
+                style: AppTextStyles.labelMd(
+                  _d,
+                ).copyWith(color: AppColors.primary),
               ),
             ),
           ],
@@ -596,21 +612,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   );
 
   PopupMenuItem<String> _menuItem(
-      String v,
-      IconData icon,
-      String label,
-      Color color,
-      ) {
+    String v,
+    IconData icon,
+    String label,
+    Color color,
+  ) {
     return PopupMenuItem(
       value: v,
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: AppTextStyles.bodyMd(_d).copyWith(color: _txtPri),
-          ),
+          Text(label, style: AppTextStyles.bodyMd(_d).copyWith(color: _txtPri)),
         ],
       ),
     );
@@ -684,10 +697,9 @@ class _NotifTileState extends State<_NotifTile> {
   Color get _txtPri =>
       widget.isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary;
 
-  Color get _txtSec =>
-      widget.isDark
-          ? AppColorsDark.textSecondary
-          : AppColorsLight.textSecondary;
+  Color get _txtSec => widget.isDark
+      ? AppColorsDark.textSecondary
+      : AppColorsLight.textSecondary;
 
   Color get _txtMut =>
       widget.isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted;
@@ -757,29 +769,29 @@ class _NotifTileState extends State<_NotifTile> {
                               widget.item.title,
                               style: AppTextStyles.labelMd(widget.isDark)
                                   .copyWith(
-                                color: _txtPri,
-                                fontWeight:
-                                isRead ? FontWeight.w500 : FontWeight.w700,
-                                fontSize: 13,
-                              ),
+                                    color: _txtPri,
+                                    fontWeight: isRead
+                                        ? FontWeight.w500
+                                        : FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             _timeLabel(widget.item.createdAt),
-                            style: AppTextStyles.bodyXs(widget.isDark)
-                                .copyWith(color: _txtMut, fontSize: 10),
+                            style: AppTextStyles.bodyXs(
+                              widget.isDark,
+                            ).copyWith(color: _txtMut, fontSize: 10),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
                         widget.item.body,
-                        style: AppTextStyles.bodyMd(widget.isDark).copyWith(
-                          color: _txtSec,
-                          height: 1.4,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.bodyMd(
+                          widget.isDark,
+                        ).copyWith(color: _txtSec, height: 1.4, fontSize: 12),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -817,25 +829,22 @@ class _NotifTileState extends State<_NotifTile> {
                               },
                               child: _isMarking
                                   ? SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 1.5,
-                                  valueColor:
-                                  AlwaysStoppedAnimation<Color>(
-                                    _txtMut,
-                                  ),
-                                ),
-                              )
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              _txtMut,
+                                            ),
+                                      ),
+                                    )
                                   : Text(
-                                'Mark read',
-                                style:
-                                AppTextStyles.labelXs(widget.isDark)
-                                    .copyWith(
-                                  color: _txtMut,
-                                  fontSize: 10,
-                                ),
-                              ),
+                                      'Mark read',
+                                      style: AppTextStyles.labelXs(
+                                        widget.isDark,
+                                      ).copyWith(color: _txtMut, fontSize: 10),
+                                    ),
                             ),
                         ],
                       ),

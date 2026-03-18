@@ -26,8 +26,7 @@ class CartProvider extends ChangeNotifier {
 
   bool get isUpdating => _status == CartStatus.updating;
 
-  int get itemCount =>
-      _cart?.items.fold(0, (sum, item) => sum! + item.quantity) ?? 0;
+  int get itemCount => _cart?.items.length ?? 0;
 
   double get total => _cart?.total ?? 0;
 

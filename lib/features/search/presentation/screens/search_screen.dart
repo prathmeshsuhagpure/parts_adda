@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:parts_adda/features/search/presentation/screens/result_view.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/constants/app_theme.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../parts/domain/models/part_model.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../providers/search_provider.dart';
@@ -86,8 +85,9 @@ class _SearchScreenState extends State<SearchScreen>
   Timer? _debounce;
 
   bool _showSuggestions = false;
-  bool _isGridView = true;
-  List<String> _recentSearches = [
+
+  //bool _isGridView = true;
+  final List<String> _recentSearches = [
     'Brake pads Swift',
     'Bosch wiper 18"',
     'Air filter i20',
@@ -240,156 +240,167 @@ class _SearchScreenState extends State<SearchScreen>
     final hasQuery = provider.query.isNotEmpty;
     final filterCount = _countActiveFilters(_pendingFilter);
 
-    return Scaffold(
-      backgroundColor: _bg,
-      body: Column(
-        children: [
-          _SearchBar(
-            ctrl: _searchCtrl,
-            focusNode: _focusNode,
-            isDark: _isDark,
-            bgInput: _bgInput,
-            border: _border,
-            textMuted: _textMut,
-            textPrimary: _textPri,
-            onChanged: _onQueryChanged,
-            onSubmit: _doSearch,
-            onClear: () {
-              _searchCtrl.clear();
-              setState(() => _showSuggestions = false);
-              context.read<SearchProvider>().clearAll();
-            },
-            onBack: () => context.pop(),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                Column(
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop){
+          context.read<SearchProvider>().clearAll();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _bg,
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: Column(
+            children: [
+              _SearchBar(
+                ctrl: _searchCtrl,
+                focusNode: _focusNode,
+                isDark: _isDark,
+                bgInput: _bgInput,
+                border: _border,
+                textMuted: _textMut,
+                textPrimary: _textPri,
+                onChanged: _onQueryChanged,
+                onSubmit: _doSearch,
+                onClear: () {
+                  _searchCtrl.clear();
+                  setState(() => _showSuggestions = false);
+                  context.read<SearchProvider>().clearAll();
+                },
+                onBack: () {
+                  context.read<SearchProvider>().clearAll();
+                  context.pop();
+                },
+              ),
+              Expanded(
+                child: Stack(
                   children: [
-                    if (hasQuery && hasResults) ...[
-                      _ResultsToolbar(
-                        total: provider.total,
-                        isGridView: _isGridView,
+                    Column(
+                      children: [
+                        if (hasQuery && hasResults) ...[
+                          _ResultsToolbar(
+                            total: provider.total,
+                            isDark: _isDark,
+                            activeFilterCount: filterCount,
+                            sortBy: _pendingFilter.sortBy,
+                            onFilter: _toggleFilter,
+                            onSort: _showSort,
+                          ),
+                          if (filterCount > 0)
+                            _ActiveFiltersRow(
+                              filter: _pendingFilter,
+                              isDark: _isDark,
+                              onClearAll: _clearAllFilters,
+                              onClearMake: () => _applyFilter(
+                                SearchFilter(
+                                  brands: _pendingFilter.brands,
+                                  categories: _pendingFilter.categories,
+                                  minPrice: _pendingFilter.minPrice,
+                                  maxPrice: _pendingFilter.maxPrice,
+                                  inStockOnly: _pendingFilter.inStockOnly,
+                                  partType: _pendingFilter.partType,
+                                  sortBy: _pendingFilter.sortBy,
+                                ),
+                              ),
+                              onClearPrice: () => _applyFilter(
+                                _pendingFilter.copyWith(
+                                  minPrice: null,
+                                  maxPrice: null,
+                                ),
+                              ),
+                              onClearStock: () => _applyFilter(
+                                _pendingFilter.copyWith(inStockOnly: null),
+                              ),
+                              onClearPartType: () => _applyFilter(
+                                _pendingFilter.copyWith(partType: null),
+                              ),
+                              onRemoveBrand: (b) => _applyFilter(
+                                _pendingFilter.copyWith(
+                                  brands: _pendingFilter.brands
+                                      .where((x) => x != b)
+                                      .toList(),
+                                ),
+                              ),
+                              onRemoveCategory: (c) => _applyFilter(
+                                _pendingFilter.copyWith(
+                                  categories: _pendingFilter.categories
+                                      .where((x) => x != c)
+                                      .toList(),
+                                ),
+                              ),
+                            ),
+                        ],
+                        Expanded(child: _buildBody(provider)),
+                      ],
+                    ),
+      
+                    // Suggestion overlay
+                    if (_showSuggestions && _focusNode.hasFocus)
+                      _SuggestionsOverlay(
+                        query: _searchCtrl.text,
+                        suggestions: provider.suggestions,
+                        recent: _recentSearches,
                         isDark: _isDark,
-                        activeFilterCount: filterCount,
-                        sortBy: _pendingFilter.sortBy,
-                        onToggleView: () =>
-                            setState(() => _isGridView = !_isGridView),
-                        onFilter: _toggleFilter,
-                        onSort: _showSort,
+                        bgCard: _bgCard,
+                        border: _border,
+                        textSec: _textSec,
+                        textMut: _textMut,
+                        onTap: (q) {
+                          _searchCtrl.text = q;
+                          _doSearch(q);
+                        },
+                        onRemoveRecent: (q) =>
+                            setState(() => _recentSearches.remove(q)),
                       ),
-                      if (filterCount > 0)
-                        _ActiveFiltersRow(
-                          filter: _pendingFilter,
-                          isDark: _isDark,
-                          onClearAll: _clearAllFilters,
-                          onClearMake: () => _applyFilter(
-                            SearchFilter(
-                              brands: _pendingFilter.brands,
-                              categories: _pendingFilter.categories,
-                              minPrice: _pendingFilter.minPrice,
-                              maxPrice: _pendingFilter.maxPrice,
-                              inStockOnly: _pendingFilter.inStockOnly,
-                              partType: _pendingFilter.partType,
-                              sortBy: _pendingFilter.sortBy,
-                            ),
-                          ),
-                          onClearPrice: () => _applyFilter(
-                            _pendingFilter.copyWith(
-                              minPrice: null,
-                              maxPrice: null,
-                            ),
-                          ),
-                          onClearStock: () => _applyFilter(
-                            _pendingFilter.copyWith(inStockOnly: null),
-                          ),
-                          onClearPartType: () => _applyFilter(
-                            _pendingFilter.copyWith(partType: null),
-                          ),
-                          onRemoveBrand: (b) => _applyFilter(
-                            _pendingFilter.copyWith(
-                              brands: _pendingFilter.brands
-                                  .where((x) => x != b)
-                                  .toList(),
-                            ),
-                          ),
-                          onRemoveCategory: (c) => _applyFilter(
-                            _pendingFilter.copyWith(
-                              categories: _pendingFilter.categories
-                                  .where((x) => x != c)
-                                  .toList(),
+      
+                    // Filter backdrop
+                    if (_showFilterPanel || _filterAnim.value > 0)
+                      AnimatedBuilder(
+                        animation: _filterSlide,
+                        builder: (_, _) => GestureDetector(
+                          onTap: _toggleFilter,
+                          child: Container(
+                            color: Colors.black.withValues(
+                              alpha: 0.45 * _filterSlide.value,
                             ),
                           ),
                         ),
-                    ],
-                    Expanded(child: _buildBody(provider)),
+                      ),
+      
+                    // Filter panel
+                    if (_showFilterPanel || _filterAnim.value > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: MediaQuery.of(context).size.width * 0.86,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(1, 0),
+                            end: Offset.zero,
+                          ).animate(_filterSlide),
+                          child: _FilterPanel(
+                            filter: _pendingFilter,
+                            isDark: _isDark,
+                            onApply: _applyFilter,
+                            onClose: _toggleFilter,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-
-                // Suggestion overlay
-                if (_showSuggestions && _focusNode.hasFocus)
-                  _SuggestionsOverlay(
-                    query: _searchCtrl.text,
-                    suggestions: provider.suggestions,
-                    recent: _recentSearches,
-                    isDark: _isDark,
-                    bgCard: _bgCard,
-                    border: _border,
-                    textSec: _textSec,
-                    textMut: _textMut,
-                    onTap: (q) {
-                      _searchCtrl.text = q;
-                      _doSearch(q);
-                    },
-                    onRemoveRecent: (q) =>
-                        setState(() => _recentSearches.remove(q)),
-                  ),
-
-                // Filter backdrop
-                if (_showFilterPanel || _filterAnim.value > 0)
-                  AnimatedBuilder(
-                    animation: _filterSlide,
-                    builder: (_, _) => GestureDetector(
-                      onTap: _toggleFilter,
-                      child: Container(
-                        color: Colors.black.withValues(
-                          alpha: 0.45 * _filterSlide.value,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Filter panel
-                if (_showFilterPanel || _filterAnim.value > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: MediaQuery.of(context).size.width * 0.86,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(1, 0),
-                        end: Offset.zero,
-                      ).animate(_filterSlide),
-                      child: _FilterPanel(
-                        filter: _pendingFilter,
-                        isDark: _isDark,
-                        onApply: _applyFilter,
-                        onClose: _toggleFilter,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildBody(SearchProvider provider) {
     if (provider.isLoading) {
-      return _SearchSkeleton(isDark: _isDark, isGrid: _isGridView);
+      return _SearchSkeleton(isDark: _isDark);
     }
     if (provider.status == SearchStatus.error) {
       return _ErrorState(
@@ -422,11 +433,10 @@ class _SearchScreenState extends State<SearchScreen>
         },
       );
     }
-    return _ResultsView(
+    return ResultsView(
       results: provider.results,
       hasMore: provider.hasMore,
       isLoadingMore: provider.isLoadingMore,
-      isGridView: _isGridView,
       isDark: _isDark,
       scrollCtrl: _scrollCtrl,
       onTap: (p) => context.push(AppRoutes.partDetailPath(p.id)),
@@ -525,54 +535,45 @@ class _SearchBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: bgInput,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: focusNode.hasFocus
-                        ? AppColors.primary.withValues(alpha: 0.6)
-                        : border,
-                    width: focusNode.hasFocus ? 1.5 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Icon(Icons.search, size: 18, color: textMuted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: ctrl,
-                        focusNode: focusNode,
-                        onChanged: onChanged,
-                        onSubmitted: onSubmit,
-                        textInputAction: TextInputAction.search,
-                        style: AppTextStyles.bodyMd(isDark),
-                        decoration: InputDecoration(
-                          hintText: 'Search parts, SKU, OEM number…',
-                          hintStyle: AppTextStyles.bodyMd(
-                            isDark,
-                          ).copyWith(color: textMuted),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (ctrl.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: onClear,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
+              child: TextField(
+                controller: ctrl,
+                focusNode: focusNode,
+                onChanged: onChanged,
+                onSubmitted: onSubmit,
+                textInputAction: TextInputAction.search,
+                style: AppTextStyles.bodyMd(isDark),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: bgInput,
+
+                  hintText: 'Search parts, SKU, OEM number…',
+                  hintStyle: AppTextStyles.bodyMd(
+                    isDark,
+                  ).copyWith(color: textMuted),
+
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+
+                  prefixIcon: Icon(Icons.search, size: 18, color: textMuted),
+
+                  suffixIcon: ctrl.text.isNotEmpty
+                      ? GestureDetector(
+                          onTap: onClear,
                           child: Icon(Icons.close, size: 16, color: textMuted),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 12),
-                  ],
+                        )
+                      : null,
+
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: border),
+                  ),
+
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -617,9 +618,9 @@ class _SuggestionsOverlay extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
     final label = suggestions.isNotEmpty ? 'Suggestions' : 'Recent Matches';
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
+      top: 10,
+      left: 10,
+      right: 10,
       child: Container(
         constraints: const BoxConstraints(maxHeight: 320),
         decoration: BoxDecoration(
@@ -738,17 +739,15 @@ class _HighlightText extends StatelessWidget {
 
 class _ResultsToolbar extends StatelessWidget {
   final int total, activeFilterCount;
-  final bool isGridView, isDark;
+  final bool isDark;
   final String sortBy;
-  final VoidCallback onToggleView, onFilter, onSort;
+  final VoidCallback onFilter, onSort;
 
   const _ResultsToolbar({
     required this.total,
-    required this.isGridView,
     required this.isDark,
     required this.activeFilterCount,
     required this.sortBy,
-    required this.onToggleView,
     required this.onFilter,
     required this.onSort,
   });
@@ -831,16 +830,6 @@ class _ResultsToolbar extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Grid/List toggle
-          GestureDetector(
-            onTap: onToggleView,
-            child: Icon(
-              isGridView ? Icons.view_list : Icons.grid_view,
-              size: 18,
-              color: textSec,
             ),
           ),
         ],
@@ -1438,499 +1427,8 @@ class _FilterPanelState extends State<_FilterPanel> {
 }
 
 // ═════════════════════════════════════════════════════════════
-// Results View — Grid + List
+// Results View — Grid
 // ═════════════════════════════════════════════════════════════
-
-class _ResultsView extends StatelessWidget {
-  final List<PartModel> results;
-  final bool hasMore, isLoadingMore, isGridView, isDark;
-  final ScrollController scrollCtrl;
-  final ValueChanged<PartModel> onTap, onAddToCart, onToggleWishlist;
-  final bool Function(PartModel) isWishlisted;
-
-  const _ResultsView({
-    required this.results,
-    required this.hasMore,
-    required this.isLoadingMore,
-    required this.isGridView,
-    required this.isDark,
-    required this.scrollCtrl,
-    required this.onTap,
-    required this.onAddToCart,
-    required this.onToggleWishlist,
-    required this.isWishlisted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (isGridView) {
-      return GridView.builder(
-        controller: scrollCtrl,
-        padding: const EdgeInsets.all(16),
-        physics: const BouncingScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.58,
-        ),
-        itemCount: results.length + (isLoadingMore ? 2 : 0),
-        itemBuilder: (_, i) {
-          if (i >= results.length) return _SkeletonCard(isDark: isDark);
-          final p = results[i];
-          return _GridCard(
-            part: p,
-            isDark: isDark,
-            wishlisted: isWishlisted(p),
-            onTap: () => onTap(p),
-            onAddToCart: () => onAddToCart(p),
-            onToggleWishlist: () => onToggleWishlist(p),
-          );
-        },
-      );
-    }
-    return ListView.separated(
-      controller: scrollCtrl,
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      itemCount: results.length + (isLoadingMore ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        if (i >= results.length) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-            ),
-          );
-        }
-        final p = results[i];
-        return _ListCard(
-          part: p,
-          isDark: isDark,
-          wishlisted: isWishlisted(p),
-          onTap: () => onTap(p),
-          onAddToCart: () => onAddToCart(p),
-          onToggleWishlist: () => onToggleWishlist(p),
-        );
-      },
-    );
-  }
-}
-
-// ── Grid card ─────────────────────────────────────────────────
-
-class _GridCard extends StatelessWidget {
-  final PartModel part;
-  final bool isDark, wishlisted;
-  final VoidCallback onTap, onAddToCart, onToggleWishlist;
-
-  const _GridCard({
-    required this.part,
-    required this.isDark,
-    required this.wishlisted,
-    required this.onTap,
-    required this.onAddToCart,
-    required this.onToggleWishlist,
-  });
-
-  String _fmt(double v) =>
-      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
-
-  @override
-  Widget build(BuildContext context) {
-    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    final bgInput = isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput;
-    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
-    final textMut = isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted;
-    final discount = (part.mrp != null && part.mrp! > part.price)
-        ? (((part.mrp! - part.price) / part.mrp!) * 100).round()
-        : 0;
-    final inStock = part.stock > 0;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(color: border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 1.05,
-                    child: Container(
-                      color: bgInput,
-                      child: part.images.isNotEmpty
-                          ? Image.network(
-                              part.images.first,
-                              fit: BoxFit.contain,
-                            )
-                          : Center(
-                              child: Icon(
-                                Icons.settings_outlined,
-                                size: 36,
-                                color: textMut,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-                if (discount > 0)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _Badge(
-                      label: '-$discount%',
-                      color: AppColorsDark.success,
-                    ),
-                  ),
-                if (part.partType == 'OEM')
-                  Positioned(
-                    top: 8,
-                    right: 30,
-                    child: _Badge(label: 'OEM', color: AppColorsDark.info),
-                  ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: GestureDetector(
-                    onTap: () {
-                      context.read<ProfileProvider>().toggleWishlist(part.id);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
-                        color: Colors.black45,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Consumer<ProfileProvider>(
-                        builder: (context, provider, _) {
-                          final isWishlisted = provider.isWishlisted(part.id);
-
-                          return Icon(
-                            isWishlisted
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 14,
-                            color: isWishlisted
-                                ? AppColors.primary
-                                : Colors.white,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    part.brand.name.toUpperCase(),
-                    style: AppTextStyles.labelXs(
-                      isDark,
-                    ).copyWith(color: textMut, letterSpacing: 0.8),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    part.name,
-                    style: AppTextStyles.labelMd(isDark),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (part.rating != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          size: 11,
-                          color: Color(0xFFFFB800),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          part.rating!.toStringAsFixed(1),
-                          style: AppTextStyles.bodyXs(isDark),
-                        ),
-                        Text(
-                          ' (${part.reviewCount})',
-                          style: AppTextStyles.bodyXs(
-                            isDark,
-                          ).copyWith(color: textMut),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Text(_fmt(part.price), style: AppTextStyles.priceSm()),
-                  if (part.mrp != null && part.mrp! > part.price)
-                    Text(
-                      _fmt(part.mrp!),
-                      style: AppTextStyles.strikethrough(isDark),
-                    ),
-                  const SizedBox(height: 7),
-                  GestureDetector(
-                    onTap: inStock ? onAddToCart : null,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      decoration: BoxDecoration(
-                        color: inStock ? AppColors.primary : bgInput,
-                        borderRadius: BorderRadius.circular(8),
-                        border: inStock ? null : Border.all(color: border),
-                      ),
-                      child: Center(
-                        child: Text(
-                          inStock ? 'Add to Cart' : 'Out of Stock',
-                          style: AppTextStyles.buttonSm.copyWith(
-                            fontSize: 11,
-                            color: inStock ? Colors.white : textMut,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── List card ─────────────────────────────────────────────────
-
-class _ListCard extends StatelessWidget {
-  final PartModel part;
-  final bool isDark, wishlisted;
-  final VoidCallback onTap, onAddToCart, onToggleWishlist;
-
-  const _ListCard({
-    required this.part,
-    required this.isDark,
-    required this.wishlisted,
-    required this.onTap,
-    required this.onAddToCart,
-    required this.onToggleWishlist,
-  });
-
-  String _fmt(double v) =>
-      '₹${v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
-
-  @override
-  Widget build(BuildContext context) {
-    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    final bgInput = isDark ? AppColorsDark.bgInput : AppColorsLight.bgInput;
-    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
-    final textSec = isDark
-        ? AppColorsDark.textSecondary
-        : AppColorsLight.textSecondary;
-    final textMut = isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted;
-    final discount = (part.mrp != null && part.mrp! > part.price)
-        ? (((part.mrp! - part.price) / part.mrp!) * 100).round()
-        : 0;
-    final inStock = part.stock > 0;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bgCard,
-          borderRadius: AppRadius.cardRadius,
-          border: Border.all(color: border),
-        ),
-        child: Row(
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: Container(
-                    width: 82,
-                    height: 82,
-                    color: bgInput,
-                    child: part.images.isNotEmpty
-                        ? Image.network(part.images.first, fit: BoxFit.contain)
-                        : Center(
-                            child: Icon(
-                              Icons.settings_outlined,
-                              size: 32,
-                              color: textMut,
-                            ),
-                          ),
-                  ),
-                ),
-                if (discount > 0)
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: _Badge(
-                      label: '-$discount%',
-                      color: AppColorsDark.success,
-                      small: true,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        part.brand.name,
-                        style: AppTextStyles.labelXs(
-                          isDark,
-                        ).copyWith(color: textSec, letterSpacing: 0.5),
-                      ),
-                      if (part.partType == 'OEM') ...[
-                        const SizedBox(width: 6),
-                        _Badge(
-                          label: 'OEM',
-                          color: AppColorsDark.info,
-                          small: true,
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    part.name,
-                    style: AppTextStyles.labelMd(isDark),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'SKU: ${part.sku}',
-                    style: AppTextStyles.mono(isDark).copyWith(fontSize: 10),
-                  ),
-                  const SizedBox(height: 5),
-                  if (part.rating != null)
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          size: 11,
-                          color: Color(0xFFFFB800),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${part.rating!.toStringAsFixed(1)} (${part.reviewCount})',
-                          style: AppTextStyles.bodyXs(isDark),
-                        ),
-                        const Spacer(),
-                        Text(
-                          inStock ? 'In Stock' : 'Out of Stock',
-                          style: AppTextStyles.labelXs(isDark).copyWith(
-                            color: inStock
-                                ? AppColorsDark.success
-                                : AppColorsDark.error,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _fmt(part.price),
-                            style: AppTextStyles.priceSm(),
-                          ),
-                          if (part.mrp != null && part.mrp! > part.price)
-                            Text(
-                              _fmt(part.mrp!),
-                              style: AppTextStyles.strikethrough(isDark),
-                            ),
-                        ],
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {
-                          context.read<ProfileProvider>().toggleWishlist(
-                            part.id,
-                          );
-                        },
-                        child: Consumer<ProfileProvider>(
-                          builder: (context, provider, _) {
-                            final isWishlisted = provider.isWishlisted(part.id);
-
-                            return Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: isWishlisted
-                                    ? AppColors.primary.withValues(alpha: 0.1)
-                                    : bgInput,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isWishlisted
-                                      ? AppColors.primary.withValues(alpha: 0.3)
-                                      : border,
-                                ),
-                              ),
-                              child: Icon(
-                                isWishlisted
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 15,
-                                color: isWishlisted
-                                    ? AppColors.primary
-                                    : textMut,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      GestureDetector(
-                        onTap: inStock ? onAddToCart : null,
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: inStock ? AppColors.primary : bgInput,
-                            borderRadius: BorderRadius.circular(8),
-                            border: inStock ? null : Border.all(color: border),
-                          ),
-                          child: Icon(
-                            Icons.add_shopping_cart_outlined,
-                            size: 15,
-                            color: inStock ? Colors.white : textMut,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _IdleState extends StatelessWidget {
   final bool isDark;
@@ -2298,9 +1796,9 @@ class _ErrorState extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════
 
 class _SearchSkeleton extends StatefulWidget {
-  final bool isDark, isGrid;
+  final bool isDark;
 
-  const _SearchSkeleton({required this.isDark, required this.isGrid});
+  const _SearchSkeleton({required this.isDark});
 
   @override
   State<_SearchSkeleton> createState() => _SearchSkeletonState();
@@ -2336,232 +1834,18 @@ class _SearchSkeletonState extends State<_SearchSkeleton>
           ? AppColorsDark.bgInput
           : AppColorsLight.bgInput;
       final c = Color.lerp(base, shimmer, _anim.value)!;
-      if (widget.isGrid) {
-        return GridView.count(
-          padding: const EdgeInsets.all(16),
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.58,
-          children: List.generate(
-            6,
-            (_) => _SkeletonCard(isDark: widget.isDark, color: c),
-          ),
-        );
-      }
-      return ListView.separated(
+      return GridView.count(
         padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (_, _) =>
-            _SkeletonListCard(isDark: widget.isDark, color: c),
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.58,
+        children: List.generate(
+          6,
+          (_) => SkeletonCard(isDark: widget.isDark, color: c),
+        ),
       );
     },
-  );
-}
-
-class _SkeletonCard extends StatelessWidget {
-  final bool isDark;
-  final Color? color;
-
-  const _SkeletonCard({required this.isDark, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? (isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard);
-    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bgCard,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: border),
-      ),
-      child: Column(
-        children: [
-          AspectRatio(
-            aspectRatio: 1.05,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Container(color: c),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 8,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: c,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: c,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 10,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: c,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: c,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkeletonListCard extends StatelessWidget {
-  final bool isDark;
-  final Color? color;
-
-  const _SkeletonListCard({required this.isDark, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? (isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard);
-    final bgCard = isDark ? AppColorsDark.bgCard : AppColorsLight.bgCard;
-    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgCard,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 82,
-            height: 82,
-            color: c,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(9)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 8,
-                  width: 60,
-                  color: c,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 10,
-                  color: c,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 10,
-                  width: 120,
-                  color: c,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      height: 20,
-                      width: 60,
-                      color: c,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      height: 30,
-                      width: 30,
-                      color: c,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Container(
-                      height: 30,
-                      width: 30,
-                      color: c,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═════════════════════════════════════════════════════════════
-// Micro widgets
-// ═════════════════════════════════════════════════════════════
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool small;
-
-  const _Badge({required this.label, required this.color, this.small = false});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: small ? 5 : 7,
-      vertical: small ? 2 : 3,
-    ),
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        fontFamily: 'Syne',
-        fontWeight: FontWeight.w800,
-        fontSize: small ? 8 : 10,
-        color: Colors.white,
-      ),
-    ),
   );
 }
 

@@ -4,7 +4,6 @@ import 'package:parts_adda/features/profile/domain/models/notification_model.dar
 import '../domain/models/address_model.dart';
 import '../domain/models/vehicle_model.dart';
 import '../../auth/domain/models/user_model.dart';
-import '../presentation/screens/notifications_screen.dart';
 
 class UserRepository {
   final Dio dio;

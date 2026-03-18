@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../shared/widgets/loading_overlay.dart';
 import '../providers/cart_provider.dart';
 import '../../domain/models/cart_model.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -54,7 +55,7 @@ class _CartScreenState extends State<CartScreen> {
       ),
       body: Consumer<CartProvider>(
         builder: (context, cart, _) {
-          if (cart.isLoading) return const Center(child: AppLoadingIndicator());
+          if (cart.isLoading) return AppShimmerList(isDark: isDarkMode,);
 
           if (cart.status == CartStatus.error) {
             return Center(
@@ -94,11 +95,12 @@ class _CartScreenState extends State<CartScreen> {
                       appliedCoupon: cartData.couponCode,
                       onApply: () async {
                         if (_couponCtrl.text.isEmpty) return;
+                        final messenger = ScaffoldMessenger.of(context);
                         final ok = await cart.applyCoupon(
                           _couponCtrl.text.trim(),
                         );
                         if (!ok && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(cart.error ?? 'Invalid coupon'),
                               backgroundColor: isDarkMode

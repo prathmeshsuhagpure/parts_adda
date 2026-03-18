@@ -18,6 +18,7 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _loading;
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
+  bool get hasUnread => unreadCount > 0;
 
   /// LOAD NOTIFICATIONS
   Future<void> loadNotifications() async {
